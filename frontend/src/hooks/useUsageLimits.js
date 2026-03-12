@@ -44,17 +44,21 @@ export function useUsageLimits() {
   const limits = planLimitsData?.[0] ?? FALLBACK_LIMITS;
   const usage = monthlyUsageData?.[0] ?? {};
 
-  // null limit = unlimited (e.g. addon unlocks the feature)
-  const hasUnlimitedTranscriptions =
-    currentUser?.addons?.transcribe === true || currentUser?.addons?.TRANSCRIBE === true;
+  // Add-on holders get a high fixed limit (1000) instead of their plan's default
+  const ADDON_LIMIT = 1000;
+  const addons = currentUser?.addons ?? {};
+
+  const hasAddonTranscriptions = addons.transcribe === true || addons.TRANSCRIBE === true;
+  const hasAddonVSL            = addons.vsl === true || addons.VSL === true;
+  const hasAddonAdCopy         = addons.adcopy === true || addons.ADCOPY === true || addons.ad_copy === true;
 
   const checkLimit = (feature) => {
     const map = {
       clones:         { used: usage.clones_used ?? 0,         limit: limits.clones },
-      vsl:            { used: usage.vsl_used ?? 0,            limit: limits.vsl },
-      ad:             { used: usage.ad_used ?? 0,             limit: limits.ad },
+      vsl:            { used: usage.vsl_used ?? 0,            limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
+      ad:             { used: usage.ad_used ?? 0,             limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
       custom:         { used: usage.custom_used ?? 0,         limit: limits.custom },
-      transcriptions: { used: usage.transcriptions_used ?? 0, limit: hasUnlimitedTranscriptions ? null : limits.transcriptions },
+      transcriptions: { used: usage.transcriptions_used ?? 0, limit: hasAddonTranscriptions ? ADDON_LIMIT : limits.transcriptions },
       credits:        { used: usage.credits_used ?? 0,        limit: limits.credits },
     };
     const f = map[feature];

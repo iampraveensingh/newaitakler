@@ -8,20 +8,29 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const languages = [
+  { value: 'ar', label: 'Arabic' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'da', label: 'Danish' },
+  { value: 'nl', label: 'Dutch' },
   { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
+  { value: 'fi', label: 'Finnish' },
   { value: 'fr', label: 'French' },
   { value: 'de', label: 'German' },
+  { value: 'el', label: 'Greek' },
+  { value: 'he', label: 'Hebrew' },
+  { value: 'hi', label: 'Hindi' },
   { value: 'it', label: 'Italian' },
-  { value: 'pt', label: 'Portuguese' },
   { value: 'ja', label: 'Japanese' },
-  { value: 'zh', label: 'Chinese' },
-];
-
-const genders = [
-  { value: 'male', label: 'Male', emoji: '👨' },
-  { value: 'female', label: 'Female', emoji: '👩' },
-  { value: 'neutral', label: 'Neutral', emoji: '🧑' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'ms', label: 'Malay' },
+  { value: 'no', label: 'Norwegian' },
+  { value: 'pl', label: 'Polish' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'sw', label: 'Swahili' },
+  { value: 'sv', label: 'Swedish' },
+  { value: 'tr', label: 'Turkish' },
 ];
 
 const qualityLevels = [
@@ -31,7 +40,7 @@ const qualityLevels = [
 ];
 
 export default function VoiceDetailsStep({ formData, setFormData, onNext }) {
-  const isFormValid = formData.name && formData.description && formData.language && formData.gender && formData.clone_mode;
+  const isFormValid = formData.name && formData.description && formData.language && formData.clone_mode;
 
   return (
     <div className="space-y-6">
@@ -55,45 +64,21 @@ export default function VoiceDetailsStep({ formData, setFormData, onNext }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label className="text-slate-300 mb-2 block">Language *</Label>
-          <Select
-            value={formData.language}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
-          >
-            <SelectTrigger className="h-12 bg-slate-800/50 border-slate-700">
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              {languages.map(lang => (
-                <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label className="text-slate-300 mb-2 block">Gender *</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {genders.map(g => (
-              <button
-                key={g.value}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, gender: g.value }))}
-                className={cn(
-                  "p-3 rounded-xl border text-center transition-all",
-                  formData.gender === g.value
-                    ? "border-violet-500 bg-violet-500/20"
-                    : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
-                )}
-              >
-                <span className="text-2xl">{g.emoji}</span>
-                <p className="text-sm font-medium text-white mt-1">{g.label}</p>
-              </button>
+      <div>
+        <Label className="text-slate-300 mb-2 block">Language *</Label>
+        <Select
+          value={formData.language}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+        >
+          <SelectTrigger className="h-12 bg-slate-800/50 border-slate-700">
+            <SelectValue placeholder="Select language" />
+          </SelectTrigger>
+          <SelectContent>
+            {languages.map(lang => (
+              <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
             ))}
-          </div>
-        </div>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>

@@ -228,6 +228,7 @@ export default function Agency() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['agencyUsers'] });
       qc.invalidateQueries({ queryKey: ['agencyStats'] });
+      qc.invalidateQueries({ queryKey: ['currentUser'] });
       setAddDialogOpen(false);
       toast.success('Agency user created successfully');
     },
@@ -249,6 +250,7 @@ export default function Agency() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['agencyUsers'] });
       qc.invalidateQueries({ queryKey: ['agencyStats'] });
+      qc.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success('User removed');
     },
     onError: (err) => toast.error(err?.response?.data?.message || 'Failed to remove user'),
@@ -259,6 +261,7 @@ export default function Agency() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['agencyUsers'] });
       qc.invalidateQueries({ queryKey: ['agencyStats'] });
+      qc.invalidateQueries({ queryKey: ['currentUser'] });
       setCreditsUser(null);
       toast.success('Credits updated');
     },

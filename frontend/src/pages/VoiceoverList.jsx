@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -35,6 +35,41 @@ export default function VoiceoverList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [playingId, setPlayingId] = useState(null);
+  const audioRef = useRef(new Audio());
+
+  const handleDownload = async (vo) => {
+    try {
+      const response = await fetch(vo.audio_url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${vo.title || 'voiceover'}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Download failed. Please try again.');
+    }
+  };
+
+  const handlePlay = (vo) => {
+    if (!vo.audio_url) {
+      toast.error('No audio available for this voiceover.');
+      return;
+    }
+    if (playingId === vo.id) {
+      audioRef.current.pause();
+      setPlayingId(null);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = vo.audio_url;
+      audioRef.current.play().catch(() => setPlayingId(null));
+      audioRef.current.onended = () => setPlayingId(null);
+      setPlayingId(vo.id);
+    }
+  };
 
   const { data: voiceovers = [], isLoading } = useQuery({
     queryKey: ['voiceovers'],
@@ -220,7 +255,7 @@ export default function VoiceoverList() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 pt-3 border-t border-slate-700/50">
                       <button
-                        onClick={() => setPlayingId(playingId === vo.id ? null : vo.id)}
+                        onClick={() => handlePlay(vo)}
                         disabled={vo.status !== 'completed'}
                         className={`flex-1 h-10 rounded-lg flex items-center justify-center gap-2 transition-all ${
                           vo.status === 'completed'
@@ -243,11 +278,9 @@ export default function VoiceoverList() {
                         <Star className={`w-4 h-4 ${vo.is_favorite ? 'fill-amber-400 text-amber-400' : ''}`} />
                       </Button>
                       {vo.status === 'completed' && vo.audio_url && (
-                        <a href={vo.audio_url} download>
-                          <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white">
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        </a>
+                        <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white" onClick={() => handleDownload(vo)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
                   </div>

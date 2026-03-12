@@ -16,6 +16,7 @@ import uploadRoutes from './routes/uploads.js';
 import planRoutes, { usageRouter, dfyOffersRouter } from './routes/plan.js';
 import agencyRoutes from './routes/agency.js';
 import scrapeRoutes from './routes/scrape.js';
+import extractScriptRoutes from './routes/extractScript.js';
 import backgroundMusicRoutes from './routes/backgroundMusic.js';
 import voiceCloneRoutes from './routes/voiceClones.js';
 
@@ -33,13 +34,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_DIR || 'uploads')));
-
+app.use('/music', express.static(path.join(__dirname, 'music')));
 // ── Entity Route Definitions ──────────────────────────────────────────────────
 // Format: buildEntityRouter(tableName, [allowedFields], userScoped)
 
 const voiceoverRoutes = buildEntityRouter('voiceovers', [
-  'title', 'keywords', 'script', 'script_source', 'voice_type', 'voice_id', 'voice_name',
-  'emotion', 'emotion_strength', 'scene_mode', 'voice_consistency',
+  'title', 'keywords', 'script', 'script_source', 'voice_type', 'voice_id', 'voice_name', 'voice_url',
+  'language', 'emotion', 'emotion_strength', 'scene_mode', 'voice_consistency',
   'background_music', 'status', 'audio_url', 'is_favorite', 'tags',
 ]);
 
@@ -81,6 +82,7 @@ app.use('/api/usage-monthly',     usageRouter);
 app.use('/api/dfy-offers',        dfyOffersRouter);
 app.use('/api/agency',            agencyRoutes);
 app.use('/api/scrape',            scrapeRoutes);
+app.use('/api/extract-script',   extractScriptRoutes);
 app.use('/api/background-music',  backgroundMusicRoutes);
 
 // Entity routes (all protected)

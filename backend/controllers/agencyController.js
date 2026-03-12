@@ -156,14 +156,23 @@ export const removeAgencyUser = async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      'SELECT id FROM users WHERE id = ? AND agency_owner_id = ?',
+      'SELECT id, credits_balance FROM users WHERE id = ? AND agency_owner_id = ?',
       [id, req.user.id]
     );
     if (!rows.length) {
       return errorResponse(res, 'Agency user not found', 404);
     }
 
-    await db.query('UPDATE users SET is_active = 0, updated_at = NOW() WHERE id = ?', [id]);
+    // Refund remaining credits back to admin before deactivating
+    const remainingCredits = parseInt(rows[0].credits_balance) || 0;
+    if (remainingCredits > 0) {
+      await db.query(
+        'UPDATE users SET credits_balance = credits_balance + ?, updated_at = NOW() WHERE id = ?',
+        [remainingCredits, req.user.id]
+      );
+    }
+
+    await db.query('UPDATE users SET is_active = 0, credits_balance = 0, updated_at = NOW() WHERE id = ?', [id]);
     return successResponse(res, null, 'Agency user removed');
   } catch (error) {
     console.error('removeAgencyUser error:', error);
@@ -200,7 +209,6 @@ export const allocateCredits = async (req, res) => {
       if (adminBalance < delta) {
         return errorResponse(res, `Insufficient credits. You have ${adminBalance} credits available but need ${delta} more.`, 400);
       }
-      // Deduct delta from admin
       await db.query(
         'UPDATE users SET credits_balance = credits_balance - ?, updated_at = NOW() WHERE id = ?',
         [delta, req.user.id]

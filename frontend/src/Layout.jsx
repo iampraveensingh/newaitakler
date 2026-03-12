@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/AuthContext';
+import { toast } from 'sonner';
 
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', emoji: '🏠' },
@@ -61,6 +63,11 @@ export default function Layout({ children, currentPageName }) {
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true/false = result
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Agency addon users cannot access Billing
+  const addonsObj = (user?.addons && typeof user.addons === 'object' && !Array.isArray(user.addons)) ? user.addons : {};
+  const hasAgency = addonsObj?.AGENCY === true || addonsObj?.agency === true;
 
   const isActive = (page) => {
     return location.pathname.includes(page) || currentPageName === page;
@@ -182,13 +189,31 @@ export default function Layout({ children, currentPageName }) {
       );
     }
 
+    // Agency users: Billing is visible but blocked with a toast
+    if (item.page === 'Billing' && hasAgency) {
+      return (
+        <motion.div
+          whileHover={{ x: 4 }}
+          onClick={() => toast.error('Billing management is not available for Agency accounts.')}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-300 hover:bg-white/5 cursor-pointer"
+        >
+          {item.emoji ? (
+            <span className="text-lg opacity-50">{item.emoji}</span>
+          ) : item.icon ? (
+            <item.icon className="w-5 h-5" />
+          ) : null}
+          {sidebarOpen && <span className="flex-1">{item.name}</span>}
+        </motion.div>
+      );
+    }
+
     return (
       <Link to={createPageUrl(item.page)}>
         <motion.div
           whileHover={{ x: 4 }}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-            ${active 
-              ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25' 
+            ${active
+              ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
               : 'text-slate-200 hover:text-white hover:bg-white/5'}`}
         >
           {item.emoji ? (

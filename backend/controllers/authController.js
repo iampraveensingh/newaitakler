@@ -74,7 +74,7 @@ export const login = async (req, res) => {
       return errorResponse(res, 'Login failed: authentication server error. Please try again.', 503);
     }
 
-    console.log('External auth response:', data);
+    console.log('[AUTH] External auth response:', JSON.stringify(data, null, 2));
 
     // Step 2: Check for error indicators in response
     const isError = data.error === true ||
@@ -103,15 +103,23 @@ export const login = async (req, res) => {
     if (data.categories) productIds.push(...extractActiveProducts(data.categories));
     productIds = [...new Set(productIds)].filter(Boolean);
 
+    console.log('[AUTH] Step 3 — Active product IDs from ProWebVentures:', productIds);
+
     if (productIds.length === 0) {
       return errorResponse(res, 'No active products found on your account. Please contact support.', 403);
     }
 
     // Step 4: Map product IDs to entitlements
     const [entitlementRows] = await db.query('SELECT * FROM product_entitlements');
+    console.log('[AUTH] Step 4 — All entries in product_entitlements:', entitlementRows.map(e => ({ product_id: e.product_id, type: e.entitlement_type, code: e.code })));
+
     const mappedEntitlements = productIds
       .map(pid => entitlementRows.find(e => e.product_id === pid))
       .filter(Boolean);
+    console.log('[AUTH] Step 4 — Matched entitlements:', mappedEntitlements.map(e => ({ product_id: e.product_id, type: e.entitlement_type, code: e.code })));
+
+    const unmappedIds = productIds.filter(pid => !entitlementRows.find(e => e.product_id === pid));
+    if (unmappedIds.length > 0) console.log('[AUTH] Step 4 — Unmapped product IDs (not in product_entitlements):', unmappedIds);
 
     if (mappedEntitlements.length === 0) {
       return errorResponse(res, 'Your Product ID is not mapped in the app. Please contact support.', 403);
@@ -120,10 +128,14 @@ export const login = async (req, res) => {
     // Step 5: Determine base plan (highest priority LOGIN_PLAN)
     const [planRows] = await db.query('SELECT * FROM plans');
     const planPriorities = {};
-    planRows.forEach(p => { planPriorities[p.name] = p.priority; });
+    // Normalize to uppercase so 'Pro', 'PRO', 'pro' all map correctly
+    planRows.forEach(p => { planPriorities[p.name.toUpperCase()] = p.priority; });
+    console.log('[AUTH] Step 5 — Plan priorities from DB (normalized):', planPriorities);
 
     const loginPlans = mappedEntitlements.filter(e => e.entitlement_type === 'LOGIN_PLAN');
     const addonEntitlements = mappedEntitlements.filter(e => e.entitlement_type === 'ADDON');
+    console.log('[AUTH] Step 5 — LOGIN_PLANs found:', loginPlans.map(e => e.code));
+    console.log('[AUTH] Step 5 — ADDONs found:', addonEntitlements.map(e => e.code));
 
     let basePlan = 'NONE';
     let highestPriority = -1;
@@ -134,9 +146,16 @@ export const login = async (req, res) => {
         basePlan = ent.code;
       }
     }
+    console.log('[AUTH] Step 5 — Selected basePlan:', basePlan, '(priority:', highestPriority + ')');
 
-    if (basePlan === 'NONE' && addonEntitlements.length > 0) {
-      return errorResponse(res, 'You have upsell access, but you need FE, PRO, or XTREME to login.', 403);
+    // Login requires FE or XTREME. PRO alone is not sufficient.
+    const hasBaseAccess = loginPlans.some(e => e.code === 'FE' || e.code === 'XTREME');
+    if (loginPlans.length > 0 && !hasBaseAccess) {
+      return errorResponse(res, 'Access requires the FE or XTREME product. A PRO subscription alone does not grant access. Please contact support.', 403);
+    }
+
+    if (basePlan === 'NONE') {
+      return errorResponse(res, 'No access plan found on your account. Please purchase the FE or XTREME product to continue.', 403);
     }
 
     // Step 6: Build addons object
@@ -150,17 +169,31 @@ export const login = async (req, res) => {
     let userId;
     if (userLookup.length > 0) {
       userId = userLookup[0].id;
+      // If plan changed to a higher tier, top up credits_balance to the new plan's limit
+      const [[existingUser]] = await db.query('SELECT base_plan, credits_balance FROM users WHERE id = ?', [userId]);
+      const [[planLimitRow]] = await db.query('SELECT credits FROM plan_limits WHERE plan_id = ?', [basePlan]);
+      const planCredits = planLimitRow?.credits || 1000;
+      // Only top up if credits_balance is 0 (new/depleted) or plan upgraded
+      const creditsUpdate = (existingUser.credits_balance === 0 || existingUser.base_plan !== basePlan)
+        ? `, credits_balance = ${planCredits}` : '';
+
       await db.query(
         `UPDATE users SET base_plan = ?, addons = ?, billing_product_ids = ?,
          plan_updated_at = ?, last_login_at = ?, auth_last_status = 'success',
-         auth_last_code = 'OK', auth_last_message = 'Login successful' WHERE id = ?`,
+         auth_last_code = 'OK', auth_last_message = 'Login successful'${creditsUpdate} WHERE id = ?`,
         [basePlan, JSON.stringify(addons), JSON.stringify(productIds), nowIso, nowIso, userId]
       );
     } else {
+      // Seed initial credits_balance from plan_limits
+      const [[planLimitRow]] = await db.query(
+        'SELECT credits FROM plan_limits WHERE plan_id = ?', [basePlan]
+      );
+      const initialCredits = planLimitRow?.credits || 1000;
+
       const [insertResult] = await db.query(
         `INSERT INTO users (username, email, full_name, role, base_plan, addons, billing_product_ids,
-         plan_updated_at, last_login_at, auth_last_status, auth_last_code, is_active, created_at, updated_at)
-         VALUES (?, ?, ?, 'admin', ?, ?, ?, ?, ?, 'success', 'OK', 1, ?, ?)`,
+         credits_balance, plan_updated_at, last_login_at, auth_last_status, auth_last_code, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, 'admin', ?, ?, ?, ?, ?, ?, 'success', 'OK', 1, ?, ?)`,
         [
           username,
           data.email || `${username}@placeholder.com`,
@@ -168,6 +201,7 @@ export const login = async (req, res) => {
           basePlan,
           JSON.stringify(addons),
           JSON.stringify(productIds),
+          initialCredits,
           nowIso,
           nowIso,
           nowIso,

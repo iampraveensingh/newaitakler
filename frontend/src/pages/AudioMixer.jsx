@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { 
-  Music2, Plus, Upload, Play, Pause, Volume2, VolumeX, 
-  RefreshCw, Save, Download, Trash2, Check
+import {
+  Music2, Play, Pause, Volume2, RefreshCw, Check
 } from 'lucide-react';
+import BackgroundMusicSection from '@/components/voice/BackgroundMusicSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,26 +29,19 @@ const presets = [
   { value: 'cinematic', label: 'Cinematic', voiceVol: 90, musicVol: 50 },
 ];
 
-const musicLibrary = [
-  { id: '1', name: 'Upbeat Corporate', duration: '2:30' },
-  { id: '2', name: 'Calm & Relaxing', duration: '3:15' },
-  { id: '3', name: 'Cinematic Epic', duration: '2:45' },
-  { id: '4', name: 'Podcast Intro', duration: '0:30' },
-  { id: '5', name: 'Soft Piano', duration: '3:00' },
-];
 
 export default function AudioMixer() {
   const queryClient = useQueryClient();
   const [projectName, setProjectName] = useState('');
   const [selectedVoiceovers, setSelectedVoiceovers] = useState([]);
-  const [musicSource, setMusicSource] = useState('library');
   const [selectedMusic, setSelectedMusic] = useState('');
   const [voiceVolume, setVoiceVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(30);
   const [autoDucking, setAutoDucking] = useState(true);
   const [preset, setPreset] = useState('custom');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingId, setPlayingId] = useState(null);
+  const audioRef = useRef(new Audio());
 
   const { data: voiceovers = [] } = useQuery({
     queryKey: ['voiceovers'],
@@ -79,6 +72,21 @@ export default function AudioMixer() {
     }
   };
 
+  const handlePlay = (e, vo) => {
+    e.stopPropagation();
+    if (!vo.audio_url) return;
+    if (playingId === vo.id) {
+      audioRef.current.pause();
+      setPlayingId(null);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = vo.audio_url;
+      audioRef.current.play().catch(() => setPlayingId(null));
+      audioRef.current.onended = () => setPlayingId(null);
+      setPlayingId(vo.id);
+    }
+  };
+
   const toggleVoiceover = (id) => {
     setSelectedVoiceovers(prev => 
       prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
@@ -92,12 +100,11 @@ export default function AudioMixer() {
         name: projectName,
         voiceover_ids: selectedVoiceovers,
         music_url: selectedMusic,
-        music_source: musicSource,
         voice_volume: voiceVolume,
         music_volume: musicVolume,
         auto_ducking: autoDucking,
         preset: preset,
-        status: 'processing'
+        status: 'pending'
       });
     } finally {
       setIsGenerating(false);
@@ -163,8 +170,8 @@ export default function AudioMixer() {
                       <p className="font-medium text-white">{vo.title}</p>
                       <p className="text-sm text-slate-400">{vo.voice_name || 'Default Voice'}</p>
                     </div>
-                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white">
-                      <Play className="w-4 h-4" />
+                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white" onClick={(e) => handlePlay(e, vo)}>
+                      {playingId === vo.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </Button>
                   </button>
                 ))}
@@ -173,66 +180,10 @@ export default function AudioMixer() {
           </GlassCard>
 
           {/* Background Music */}
-          <GlassCard className="p-6" hover={false}>
-            <h3 className="text-lg font-semibold text-white mb-4">Background Music</h3>
-            
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant={musicSource === 'library' ? 'default' : 'outline'}
-                onClick={() => setMusicSource('library')}
-                className={musicSource === 'library' ? 'bg-violet-600' : 'border-slate-700'}
-              >
-                Music Library
-              </Button>
-              <Button
-                variant={musicSource === 'upload' ? 'default' : 'outline'}
-                onClick={() => setMusicSource('upload')}
-                className={musicSource === 'upload' ? 'bg-violet-600' : 'border-slate-700'}
-              >
-                <Upload className="w-4 h-4 mr-2" /> Upload
-              </Button>
-            </div>
-
-            {musicSource === 'library' ? (
-              <div className="space-y-2">
-                {musicLibrary.map(track => (
-                  <button
-                    key={track.id}
-                    onClick={() => setSelectedMusic(track.id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                      selectedMusic === track.id
-                        ? 'border-violet-500 bg-violet-500/10'
-                        : 'border-slate-700 hover:border-slate-600'
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      selectedMusic === track.id
-                        ? 'bg-violet-500'
-                        : 'bg-slate-800'
-                    }`}>
-                      <Music2 className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-medium text-white">{track.name}</p>
-                      <p className="text-sm text-slate-400">{track.duration}</p>
-                    </div>
-                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white">
-                      <Play className="w-4 h-4" />
-                    </Button>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center">
-                <Upload className="w-12 h-12 mx-auto text-slate-500 mb-3" />
-                <p className="text-white font-medium">Upload Music File</p>
-                <p className="text-sm text-slate-400">MP3, WAV supported</p>
-                <Button variant="outline" className="mt-4 border-slate-700">
-                  Choose File
-                </Button>
-              </div>
-            )}
-          </GlassCard>
+          <BackgroundMusicSection
+            selectedMusic={selectedMusic}
+            onSelectMusic={(id, _name, url) => setSelectedMusic(id === 'none' ? '' : (url || id))}
+          />
         </div>
 
         {/* Sidebar Controls */}

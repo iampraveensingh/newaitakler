@@ -95,18 +95,22 @@ export default function Dashboard() {
   // Agency sub-users have a personal credit allocation instead of a plan-level limit
   const isAgencySubUser = !!currentUser?.agency_owner_id;
 
-  // Addon-unlocked unlimited features (null limit = unlimited)
-  const hasUnlimitedTranscriptions =
-    currentUser?.addons?.transcribe === true || currentUser?.addons?.TRANSCRIBE === true;
+  // Add-on holders get a high fixed limit (1000) instead of their plan's default
+  const ADDON_LIMIT = 1000;
+  const addons = currentUser?.addons ?? {};
+
+  const hasAddonTranscriptions = addons.transcribe === true || addons.TRANSCRIBE === true;
+  const hasAddonVSL            = addons.vsl === true || addons.VSL === true;
+  const hasAddonAdCopy         = addons.adcopy === true || addons.ADCOPY === true || addons.ad_copy === true;
 
   // Build usage data for cards
   const usageCounts = {
-    credits: { used: usage.credits_used, limit: isAgencySubUser ? (currentUser?.credits_balance ?? 0) : limits.credits },
+    credits: { used: usage.credits_used, limit: currentUser?.credits_balance ?? limits.credits },
     clones: { used: usage.clones_used, limit: limits.clones },
-    vsl: { used: usage.vsl_used, limit: limits.vsl },
-    adcopy: { used: usage.ad_used, limit: limits.ad },
+    vsl: { used: usage.vsl_used, limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
+    adcopy: { used: usage.ad_used, limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
     customvoice: { used: usage.custom_used, limit: limits.custom },
-    transcriptions: { used: usage.transcriptions_used, limit: hasUnlimitedTranscriptions ? null : limits.transcriptions },
+    transcriptions: { used: usage.transcriptions_used, limit: hasAddonTranscriptions ? ADDON_LIMIT : limits.transcriptions },
   };
 
   // Combine recent projects

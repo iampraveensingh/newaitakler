@@ -4,9 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  AudioLines, Sparkles, RefreshCw, Youtube, FileText, Keyboard, Wand2,
-  Volume2, Music, Save, Video, Megaphone
+import {
+  AudioLines, Sparkles, RefreshCw, Link, FileText, Keyboard, Wand2,
+  Volume2, Music, Save, Video, Megaphone, Loader2
 } from 'lucide-react';
 import VoiceSelectionSection from '@/components/voice/VoiceSelectionSection';
 import BackgroundMusicSection from '@/components/voice/BackgroundMusicSection';
@@ -21,6 +21,32 @@ import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+const languages = [
+  { value: 'ar', label: 'Arabic' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'da', label: 'Danish' },
+  { value: 'nl', label: 'Dutch' },
+  { value: 'en', label: 'English' },
+  { value: 'fi', label: 'Finnish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'el', label: 'Greek' },
+  { value: 'he', label: 'Hebrew' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'it', label: 'Italian' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'ms', label: 'Malay' },
+  { value: 'no', label: 'Norwegian' },
+  { value: 'pl', label: 'Polish' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'sw', label: 'Swahili' },
+  { value: 'sv', label: 'Swedish' },
+  { value: 'tr', label: 'Turkish' },
+];
 
 const emotions = [
   { value: 'neutral', label: 'Neutral', emoji: '😐' },
@@ -293,6 +319,8 @@ export default function CreateVoiceover() {
     voice_type: 'studio',
     voice_id: '',
     voice_name: 'Alex',
+    voice_url: '',
+    language: 'en',
     emotion: 'neutral',
     emotion_strength: 'medium',
     scene_mode: 'casual',
@@ -305,6 +333,22 @@ export default function CreateVoiceover() {
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [scriptMode, setScriptMode] = useState('manual');
   const [aiPrompt, setAiPrompt] = useState('');
+  const [youtubeUrl, setLinkUrl] = useState('');
+  const [isExtractingScript, setIsExtractingScript] = useState(false);
+
+  const handleExtractScript = async () => {
+    if (!youtubeUrl.trim()) return;
+    setIsExtractingScript(true);
+    try {
+      const result = await base44.integrations.Core.ExtractScript({ url: youtubeUrl.trim() });
+      setFormData(prev => ({ ...prev, script: result.script, script_source: 'youtube' }));
+      toast.success(result.title ? `Script extracted: "${result.title}"` : 'Script extracted successfully!');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to extract script from this URL.');
+    } finally {
+      setIsExtractingScript(false);
+    }
+  };
 
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get('id');
@@ -360,7 +404,6 @@ export default function CreateVoiceover() {
         createdIdRef.current = result.id;
       }
       queryClient.invalidateQueries({ queryKey: ['voiceovers'] });
-      toast.success(editId || createdIdRef.current ? 'Voiceover updated!' : 'Voiceover saved!');
     }
   });
 
@@ -389,13 +432,13 @@ export default function CreateVoiceover() {
     setShowGenerating(true);
     // Step 1: Create (or update if editing) with status 'processing'
     // The mutation's onSuccess will store the new record's ID in createdIdRef
-    await saveMutation.mutateAsync({ ...formData, status: 'processing' });
+    await saveMutation.mutateAsync({ ...formData, status: 'pending' });
   };
 
   const handleGenerationComplete = async () => {
     // Step 2: UPDATE the same record (using createdIdRef) with status 'completed'
     // This prevents the double-insert bug
-    await saveMutation.mutateAsync({ ...formData, status: 'processing' });
+    await saveMutation.mutateAsync({ ...formData, status: 'pending' });
 
     // Track 1 credit for voiceover generation
     try {
@@ -497,7 +540,7 @@ export default function CreateVoiceover() {
               tabs={[
                 { value: 'manual', label: 'Write Manually', icon: Keyboard },
                 { value: 'ai', label: 'AI Generate', icon: Sparkles },
-                { value: 'youtube', label: 'From YouTube', icon: Youtube },
+                { value: 'youtube', label: 'From YouTube', icon: Link },
                 { value: 'vsl', label: 'From VSL', icon: Video, badge: 'NEW' },
                 { value: 'ad', label: 'From Ad Copy', icon: Megaphone, badge: 'NEW' },
               ]}
@@ -531,16 +574,27 @@ export default function CreateVoiceover() {
 
           {scriptMode === 'youtube' && (
             <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-red-500/5 to-pink-500/5 border border-red-500/20">
-              <Label className="text-slate-300 mb-2 block">YouTube/Podcast URL</Label>
+              <Label className="text-slate-300 mb-2 block">YouTube / Podcast URL</Label>
               <div className="flex gap-3">
                 <Input
+                  value={youtubeUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
                   className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 flex-1"
+                  onKeyDown={(e) => e.key === 'Enter' && handleExtractScript()}
                 />
-                <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600">
-                  <Youtube className="w-4 h-4 mr-2" /> Extract
+                <Button
+                  onClick={handleExtractScript}
+                  disabled={!youtubeUrl.trim() || isExtractingScript}
+                  className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shrink-0"
+                >
+                  {isExtractingScript
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Extracting...</>
+                    : <><Link className="w-4 h-4 mr-2" /> Extract</>
+                  }
                 </Button>
               </div>
+              <p className="text-xs text-slate-500 mt-2">Works with YouTube videos (captions) and podcast/article pages.</p>
             </div>
           )}
 
@@ -572,7 +626,7 @@ export default function CreateVoiceover() {
           <SectionTitle icon={Volume2} title="Choose a Voice" subtitle="Browse and select from our voice library" />
           <VoiceSelectionSection
             selectedVoiceId={formData.voice_id}
-            onSelectVoice={(id, name, type) => setFormData(prev => ({ ...prev, voice_id: id, voice_name: name, voice_type: type }))}
+            onSelectVoice={(id, name, type, url) => setFormData(prev => ({ ...prev, voice_id: id, voice_name: name, voice_type: type, voice_url: url || '' }))}
             initialTab={preselectedVoiceType === 'cloned' ? 'cloned' : preselectedVoiceType === 'custom' ? 'custom' : undefined}
           />
         </GlassCard>
@@ -584,9 +638,30 @@ export default function CreateVoiceover() {
           <SectionTitle icon={Wand2} title="Voice Settings" subtitle="Customize emotion and delivery style" />
           
           <div className="space-y-8">
-            {/* Emotion */}
+            {/* Language */}
             <div>
-              <Label className="text-slate-300 mb-3 block">Emotion</Label>
+              <Label className="text-slate-300 mb-2 block">Language</Label>
+              <Select
+                value={formData.language}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+              >
+                <SelectTrigger className="h-12 bg-slate-800/50 border-slate-700">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map(lang => (
+                    <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Emotion */}
+            <div className={formData.language !== 'en' ? 'opacity-40 pointer-events-none select-none' : ''}>
+              <Label className="text-slate-300 mb-3 block">
+                Emotion
+                {formData.language !== 'en' && <span className="ml-2 text-xs text-slate-500">(English only)</span>}
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {emotions.map(emotion => (
                   <OptionButton
@@ -601,8 +676,11 @@ export default function CreateVoiceover() {
             </div>
 
             {/* Scene Mode */}
-            <div>
-              <Label className="text-slate-300 mb-3 block">Scene Mode</Label>
+            <div className={formData.language !== 'en' ? 'opacity-40 pointer-events-none select-none' : ''}>
+              <Label className="text-slate-300 mb-3 block">
+                Scene Mode
+                {formData.language !== 'en' && <span className="ml-2 text-xs text-slate-500">(English only)</span>}
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {sceneModes.map(mode => (
                   <OptionButton
@@ -637,7 +715,7 @@ export default function CreateVoiceover() {
           <SectionTitle icon={Music} title="Background Music" subtitle="Choose from our library or upload your own" />
           <BackgroundMusicSection
             selectedMusic={formData.background_music || 'none'}
-            onSelectMusic={(id) => setFormData(prev => ({ ...prev, background_music: id === 'none' ? '' : id }))}
+            onSelectMusic={(id, _name, url) => setFormData(prev => ({ ...prev, background_music: id === 'none' ? '' : (url || id) }))}
           />
         </GlassCard>
       </motion.div>
@@ -653,7 +731,7 @@ export default function CreateVoiceover() {
             <AudioLines className="w-5 h-5 mr-2" /> Generate Voiceover
           </Button>
           <Button
-            onClick={() => saveMutation.mutate(formData)}
+            onClick={() => saveMutation.mutate(formData, { onSuccess: () => toast.success('Draft saved successfully!') })}
             variant="outline"
             className="sm:w-auto border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 h-14 px-8"
           >

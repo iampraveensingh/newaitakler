@@ -8,6 +8,14 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+// Resolve relative paths (e.g. /music/track.mp3) to full URLs using the backend origin
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
+const resolveUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return BACKEND_ORIGIN + (url.startsWith('/') ? '' : '/') + url;
+};
+
 const musicCategories = [
   { id: 'all', label: 'All', icon: Music2, color: 'from-violet-500 to-purple-500' },
   { id: 'corporate', label: 'Corporate', icon: Briefcase, color: 'from-blue-500 to-cyan-500' },
@@ -104,8 +112,8 @@ export default function BackgroundMusicSection({ selectedMusic, onSelectMusic })
   const handlePlayPreview = (e, track) => {
     e.stopPropagation();
     // Library tracks: audio_url | Uploaded tracks (from DB): file_url
-    const src = track.audio_url || track.file_url || '';
-    const key = track.audio_url || track.file_url || String(track.id);
+    const src = resolveUrl(track.audio_url || track.file_url || '');
+    const key = resolveUrl(track.audio_url || track.file_url || '') || String(track.id);
     if (!src) return;
     if (playingId === key) {
       audioRef.current.pause();
@@ -237,10 +245,10 @@ export default function BackgroundMusicSection({ selectedMusic, onSelectMusic })
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => onSelectMusic(track.audio_url || String(track.id), track.name, track.audio_url)}
+                    onClick={() => { const url = resolveUrl(track.audio_url); onSelectMusic(url || String(track.id), track.name, url); }}
                     className={cn(
                       "p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3",
-                      selectedMusic === (track.audio_url || String(track.id))
+                      selectedMusic === (resolveUrl(track.audio_url) || String(track.id))
                         ? 'border-violet-500 bg-violet-500/15 shadow-md shadow-violet-500/20'
                         : 'border-slate-700/50 bg-slate-900/40 hover:border-slate-600 hover:bg-slate-800/50'
                     )}
@@ -250,12 +258,12 @@ export default function BackgroundMusicSection({ selectedMusic, onSelectMusic })
                       onClick={(e) => handlePlayPreview(e, track)}
                       className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-all",
-                        playingId === (track.audio_url || String(track.id))
+                        playingId === (resolveUrl(track.audio_url) || String(track.id))
                           ? 'bg-violet-500 text-white'
                           : `bg-gradient-to-br ${getCategoryColor(track.category)} text-white/90 hover:text-white`
                       )}
                     >
-                      {playingId === (track.audio_url || String(track.id)) ? (
+                      {playingId === (resolveUrl(track.audio_url) || String(track.id)) ? (
                         <Pause className="w-4 h-4" />
                       ) : (
                         <Play className="w-4 h-4 ml-0.5" />
@@ -273,7 +281,7 @@ export default function BackgroundMusicSection({ selectedMusic, onSelectMusic })
                     </div>
 
                     {/* Selected Check */}
-                    {selectedMusic === (track.audio_url || String(track.id)) && (
+                    {selectedMusic === (resolveUrl(track.audio_url) || String(track.id)) && (
                       <div className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
                         <CheckCircle className="w-4 h-4 text-white" />
                       </div>

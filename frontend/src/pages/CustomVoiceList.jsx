@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, Plus, Search, Play, Trash2, Star, MoreVertical, 
+import {
+  Sparkles, Plus, Search, Play, Pause, Trash2, Star, MoreVertical,
   Clock, Badge, Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,25 @@ import { toast } from 'sonner';
 export default function CustomVoiceList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [playingId, setPlayingId] = useState(null);
+  const audioRef = useRef(new Audio());
+
+  const handlePreview = (voice) => {
+    if (!voice.audio_url) {
+      toast.error('No preview audio available for this voice yet.');
+      return;
+    }
+    if (playingId === voice.id) {
+      audioRef.current.pause();
+      setPlayingId(null);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = voice.audio_url;
+      audioRef.current.play().catch(() => setPlayingId(null));
+      audioRef.current.onended = () => setPlayingId(null);
+      setPlayingId(voice.id);
+    }
+  };
 
   const { data: voices = [], isLoading } = useQuery({
     queryKey: ['customVoices'],
@@ -177,8 +196,15 @@ export default function CustomVoiceList() {
 
                   {voice.status === 'ready' && (
                     <div className="mt-4 pt-4 border-t border-slate-700/50 flex gap-2">
-                      <Button size="sm" className="flex-1 bg-slate-800 hover:bg-slate-700">
-                        <Play className="w-4 h-4 mr-1" /> Preview
+                      <Button
+                        size="sm"
+                        onClick={() => handlePreview(voice)}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700"
+                      >
+                        {playingId === voice.id
+                          ? <><Pause className="w-4 h-4 mr-1" /> Pause</>
+                          : <><Play className="w-4 h-4 mr-1" /> Preview</>
+                        }
                       </Button>
                       <Link to={createPageUrl('CreateVoiceover') + `?voiceId=custom_${voice.id}&voiceName=${encodeURIComponent(voice.name)}&voiceType=custom`} className="flex-1">
                         <Button size="sm" className="w-full bg-gradient-to-r from-amber-500 to-orange-500">

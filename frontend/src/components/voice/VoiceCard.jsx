@@ -39,7 +39,7 @@ export default function VoiceCard({ voice, selectedVoiceId, onSelectVoice }) {
 
   return (
     <motion.div
-      onClick={() => onSelectVoice(voice.id, voice.name, voice.type)}
+      onClick={() => onSelectVoice(voice.id, voice.name, voice.type, voice.audio || '')}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(

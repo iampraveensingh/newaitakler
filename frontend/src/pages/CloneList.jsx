@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Copy, Plus, Search, Play, Pause, Download, Trash2, 
+import {
+  Copy, Plus, Search, Play, Pause, Download, Trash2,
   Star, MoreVertical, Tag, Clock, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,26 @@ import { toast } from 'sonner';
 export default function CloneList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [playingId, setPlayingId] = useState(null);
+  const audioRef = useRef(new Audio());
+
+  const handlePreview = (clone) => {
+    const url = clone.audio_url || clone.sample_url;
+    if (!url) {
+      toast.error('No preview audio available for this clone yet.');
+      return;
+    }
+    if (playingId === clone.id) {
+      audioRef.current.pause();
+      setPlayingId(null);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = url;
+      audioRef.current.play().catch(() => setPlayingId(null));
+      audioRef.current.onended = () => setPlayingId(null);
+      setPlayingId(clone.id);
+    }
+  };
 
   const { data: clones = [], isLoading } = useQuery({
     queryKey: ['clones'],
@@ -142,7 +162,9 @@ export default function CloneList() {
 
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-semibold text-white">{clone.name}</h3>
-                    {clone.is_favorite && <Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                    {!!clone.is_favorite && (
+  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+)}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -164,8 +186,15 @@ export default function CloneList() {
 
                   {clone.status === 'ready' && (
                     <div className="mt-4 pt-4 border-t border-slate-700/50 flex gap-2">
-                      <Button size="sm" className="flex-1 bg-slate-800 hover:bg-slate-700">
-                        <Play className="w-4 h-4 mr-1" /> Preview
+                      <Button
+                        size="sm"
+                        onClick={() => handlePreview(clone)}
+                        className="flex-1 bg-slate-800 hover:bg-slate-700"
+                      >
+                        {playingId === clone.id
+                          ? <><Pause className="w-4 h-4 mr-1" /> Pause</>
+                          : <><Play className="w-4 h-4 mr-1" /> Preview</>
+                        }
                       </Button>
                       <Link to={createPageUrl('CreateVoiceover') + `?voiceId=clone_${clone.id}&voiceName=${encodeURIComponent(clone.name)}&voiceType=cloned`} className="flex-1">
                         <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-cyan-600">

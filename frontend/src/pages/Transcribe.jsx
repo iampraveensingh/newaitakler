@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useUsageLimits } from '@/hooks/useUsageLimits';
 import AddonUpgradeCard from '@/components/dashboard/AddonUpgradeCard';
@@ -45,6 +47,7 @@ const outputFormats = [
 
 export default function Transcribe() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { checkLimit } = useUsageLimits();
   const transLimit = checkLimit('transcriptions');
   const [sourceType, setSourceType] = useState('youtube');
@@ -393,7 +396,25 @@ export default function Transcribe() {
                                 </Button>
                               </motion.div>
                               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-700">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-slate-400 hover:text-white hover:bg-slate-700"
+                                  onClick={() => {
+                                    const ext = trans.output_format === 'json' ? 'json'
+                                      : trans.output_format === 'srt' ? 'srt'
+                                      : trans.output_format === 'vtt' ? 'vtt'
+                                      : 'txt';
+                                    const mimeType = trans.output_format === 'json' ? 'application/json' : 'text/plain';
+                                    const blob = new Blob([trans.transcript], { type: mimeType });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${trans.title || 'transcription'}.${ext}`;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                  }}
+                                >
                                   <Download className="w-4 h-4" />
                                 </Button>
                               </motion.div>
@@ -406,7 +427,14 @@ export default function Transcribe() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-                              <DropdownMenuItem className="text-slate-200 focus:text-white focus:bg-slate-700">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  sessionStorage.setItem('vo_prefill_script', trans.transcript);
+                                  navigate(createPageUrl('CreateVoiceover'));
+                                }}
+                                disabled={!trans.transcript}
+                                className="text-slate-200 focus:text-white focus:bg-slate-700"
+                              >
                                 <Mic className="w-4 h-4 mr-2" /> Create Voiceover
                               </DropdownMenuItem>
                               <DropdownMenuItem 

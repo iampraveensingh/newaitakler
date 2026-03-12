@@ -213,6 +213,11 @@ export const integrations = {
       return data.data; // { title, metaDescription, headings, bodyText }
     },
 
+    ExtractScript: async ({ url }) => {
+      const { data } = await apiClient.post('/extract-script', { url });
+      return data.data; // { script, source, title }
+    },
+
     UploadFile: async ({ file, track = true }) => {
       const formData = new FormData();
       formData.append('file', file);

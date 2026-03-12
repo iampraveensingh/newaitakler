@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS `plans` (
 -- Default plans
 INSERT IGNORE INTO `plans` (`name`, `priority`, `description`) VALUES
   ('FE',     10, 'Front End / Starter'),
-  ('PRO',    20, 'Pro Upgrade'),
-  ('XTREME', 30, 'Extreme / Top Tier');
+  ('XTREME', 20, 'Extreme / Top Tier'),
+  ('PRO',    30, 'Pro Upgrade');
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -348,6 +348,14 @@ CREATE TABLE IF NOT EXISTS `file_uploads` (
   INDEX `idx_fu_user_id` (`user_id`),
   CONSTRAINT `fk_fu_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ─────────────────────────────────────────────────────────────
+-- MIGRATION: Fix plan priorities — PRO must be highest so FE/XTREME+PRO users
+-- get PRO plan. Priority order: PRO(30) > XTREME(20) > FE(10)
+-- ─────────────────────────────────────────────────────────────
+UPDATE `plans` SET `priority` = 20 WHERE `name` = 'XTREME';
+UPDATE `plans` SET `priority` = 30 WHERE `name` = 'PRO';
 
 
 -- ─────────────────────────────────────────────────────────────

@@ -7,21 +7,21 @@ import IconTabs from '@/components/ui/IconTabs';
 import { Mic, Heart, Briefcase, Drama, Copy, Sparkles, Loader2, Clock } from 'lucide-react';
 
 const stockVoicesData = [
-  { id: 'sarah', name: 'Sarah', type: 'emotional', description: 'Warm & friendly', audio: '' },
-  { id: 'emma', name: 'Emma', type: 'emotional', description: 'Calm & soothing', audio: '' },
-  { id: 'luna', name: 'Luna', type: 'emotional', description: 'Playful & light', audio: '' },
-  { id: 'olivia', name: 'Olivia', type: 'emotional', description: 'Empathetic tone', audio: '' },
-  { id: 'mia', name: 'Mia', type: 'emotional', description: 'Gentle & caring', audio: '' },
-  { id: 'alex', name: 'Alex', type: 'professional', description: 'Clear & confident', audio: '' },
-  { id: 'michael', name: 'Michael', type: 'professional', description: 'Deep & authoritative', audio: '' },
-  { id: 'david', name: 'David', type: 'professional', description: 'Energetic presenter', audio: '' },
-  { id: 'james', name: 'James', type: 'professional', description: 'News anchor style', audio: '' },
-  { id: 'robert', name: 'Robert', type: 'professional', description: 'Corporate tone', audio: '' },
-  { id: 'aria', name: 'Aria', type: 'expressive', description: 'Dynamic range', audio: '' },
-  { id: 'felix', name: 'Felix', type: 'expressive', description: 'Dramatic flair', audio: '' },
-  { id: 'ivy', name: 'Ivy', type: 'expressive', description: 'Storyteller', audio: '' },
-  { id: 'max', name: 'Max', type: 'expressive', description: 'Animated & fun', audio: '' },
-  { id: 'zoe', name: 'Zoe', type: 'expressive', description: 'Versatile artist', audio: '' },
+  { id: 'sarah', name: 'Sarah', type: 'emotional', description: 'Warm & friendly', audio: 'https://staging.prowebventures.com/music/sarah.wav' },
+  { id: 'emma', name: 'Emma', type: 'emotional', description: 'Calm & soothing', audio: 'https://staging.prowebventures.com/music/emma.wav' },
+  { id: 'nicole', name: 'Nicole', type: 'emotional', description: 'Deep', audio: 'https://staging.prowebventures.com/music/Nicole.wav' },
+  { id: 'olivia', name: 'Olivia', type: 'emotional', description: 'Empathetic tone', audio: 'https://staging.prowebventures.com/music/Olivia.wav' },
+  { id: 'mia', name: 'Mia', type: 'emotional', description: 'Gentle & caring', audio: 'https://staging.prowebventures.com/music/Mia.wav' },
+  { id: 'alex', name: 'Alex', type: 'professional', description: 'Clear & confident', audio: 'https://staging.prowebventures.com/music/Alex.wav' },
+  { id: 'michael', name: 'Michael (PM)', type: 'professional', description: 'Deep & authoritative', audio: 'https://staging.prowebventures.com/music/Michael.wav' },
+  { id: 'david', name: 'David', type: 'professional', description: 'Energetic presenter', audio: 'https://staging.prowebventures.com/music/David.wav' },
+  { id: 'james', name: 'James', type: 'professional', description: 'News anchor style', audio: 'https://staging.prowebventures.com/music/James.wav' },
+  { id: 'robert', name: 'Robert', type: 'professional', description: 'Corporate tone', audio: 'https://staging.prowebventures.com/music/emma.wav' },
+  { id: 'aria', name: 'Aria', type: 'expressive', description: 'Dynamic range', audio: 'https://staging.prowebventures.com/music/Aria.wav' },
+  { id: 'felix', name: 'Felix', type: 'expressive', description: 'Dramatic flair', audio: 'https://staging.prowebventures.com/music/Felix.wav' },
+  { id: 'ivy', name: 'Ivy', type: 'expressive', description: 'Storyteller', audio: 'https://staging.prowebventures.com/music/Ivy.wav' },
+  { id: 'max', name: 'Max', type: 'expressive', description: 'Animated & fun', audio: 'https://staging.prowebventures.com/music/Max.wav' },
+  { id: 'zoe', name: 'Zoe', type: 'expressive', description: 'Versatile artist', audio: 'https://staging.prowebventures.com/music/Zoe.wav' },
 ];
 
 const voiceCategories = [
@@ -112,12 +112,12 @@ export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, 
     }
   }, []);
 
-  const handleSelectVoice = (id, name, type) => {
+  const handleSelectVoice = (id, name, type, audio = '') => {
     // Save to recent voices
     const newRecent = [{ id, name, type }, ...recentVoices.filter(v => v.id !== id)].slice(0, 8);
     setRecentVoices(newRecent);
     localStorage.setItem('recentVoices', JSON.stringify(newRecent));
-    onSelectVoice(id, name, type);
+    onSelectVoice(id, name, type, audio);
   };
 
   // Map recent voice data to full voice objects

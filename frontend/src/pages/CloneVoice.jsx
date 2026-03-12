@@ -21,12 +21,11 @@ export default function CloneVoice() {
     name: '',
     description: '',
     language: '',
-    gender: '',
     clone_mode: 'standard',
     is_public: false,
     sample_url: '',
     source_type: '',
-    status: 'processing',
+    status: 'pending',
   });
 
   const cloneVoiceMutation = useMutation({
