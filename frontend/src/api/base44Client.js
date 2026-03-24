@@ -110,6 +110,11 @@ function createEntityApi(endpoint) {
       return data.data;
     },
 
+    get: async (id) => {
+      const { data } = await apiClient.get(`/${endpoint}/${id}`);
+      return data.data;
+    },
+
     delete: async (id) => {
       const { data } = await apiClient.delete(`/${endpoint}/${id}`);
       return data.data;

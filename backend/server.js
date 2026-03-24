@@ -72,6 +72,10 @@ const transcriptionRoutes = buildEntityRouter('transcriptions', [
   'language', 'status', 'transcript', 'duration', 'word_count',
 ]);
 
+const conversationalVoiceRoutes = buildEntityRouter('conversational_voices', [
+  'title', 'full_script', 'speakers', 'segments', 'audio_url', 'duration', 'status',
+]);
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',              authRoutes);
 app.use('/api/users',             usersRoutes);
@@ -92,7 +96,8 @@ app.use('/api/custom-voices',     verifyToken, customVoiceRoutes);
 app.use('/api/audio-mixes',       verifyToken, audioMixRoutes);
 app.use('/api/vsl-copies',        verifyToken, vslCopyRoutes);
 app.use('/api/ad-copies',         verifyToken, adCopyRoutes);
-app.use('/api/transcriptions',    verifyToken, transcriptionRoutes);
+app.use('/api/transcriptions',         verifyToken, transcriptionRoutes);
+app.use('/api/conversational-voices',  verifyToken, conversationalVoiceRoutes);
 
 // (Agency routes are now handled by /routes/agency.js)
 

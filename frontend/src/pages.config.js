@@ -52,6 +52,8 @@ import Agency from './pages/Agency';
 import AudioMixer from './pages/AudioMixer';
 import Billing from './pages/Billing';
 import CloneList from './pages/CloneList';
+import ConversationalList from './pages/ConversationalList';
+import CreateConversational from './pages/CreateConversational';
 import CloneVoice from './pages/CloneVoice';
 import CreateAdCopy from './pages/CreateAdCopy';
 import CreateCustomVoice from './pages/CreateCustomVoice';
@@ -59,12 +61,14 @@ import CreateVSL from './pages/CreateVSL';
 import CreateVoiceover from './pages/CreateVoiceover';
 import CustomVoiceList from './pages/CustomVoiceList';
 import DFYOffers from './pages/DFYOffers';
+import GettingStarted from './pages/GettingStarted';
 import Dashboard from './pages/Dashboard';
 import MixerList from './pages/MixerList';
 import SignIn from './pages/SignIn';
 import Support from './pages/Support';
 import Transcribe from './pages/Transcribe';
 import VSLList from './pages/VSLList';
+import VideoTutorials from './pages/VideoTutorials';
 import ViralPro from './pages/ViralPro';
 import VoiceoverList from './pages/VoiceoverList';
 import __Layout from './Layout.jsx';
@@ -76,6 +80,8 @@ export const PAGES = {
     "AudioMixer": AudioMixer,
     "Billing": Billing,
     "CloneList": CloneList,
+    "ConversationalList": ConversationalList,
+    "CreateConversational": CreateConversational,
     "CloneVoice": CloneVoice,
     "CreateAdCopy": CreateAdCopy,
     "CreateCustomVoice": CreateCustomVoice,
@@ -83,12 +89,14 @@ export const PAGES = {
     "CreateVoiceover": CreateVoiceover,
     "CustomVoiceList": CustomVoiceList,
     "DFYOffers": DFYOffers,
+    "GettingStarted": GettingStarted,
     "Dashboard": Dashboard,
     "MixerList": MixerList,
     "SignIn": SignIn,
     "Support": Support,
     "Transcribe": Transcribe,
     "VSLList": VSLList,
+    "VideoTutorials": VideoTutorials,
     "ViralPro": ViralPro,
     "VoiceoverList": VoiceoverList,
 }

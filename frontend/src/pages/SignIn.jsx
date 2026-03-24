@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AudioLines, Loader2, Lock, User, AlertCircle } from 'lucide-react';
+import { AudioLines, Loader2, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
+
+const FOOTER_LINKS = [
+  { label: 'TOC', href: 'https://aisoftllc.com/tos.html' },
+  { label: 'Support', href: 'https://agarwalinnosoft.com/support/' },
+  { label: 'Cookies Policy', href: 'https://aisoftllc.com/cookies-policy.html' },
+  { label: 'Privacy Policy', href: 'https://aisoftllc.com/privacy.html' },
+];
 
 export default function SignIn() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -22,7 +27,7 @@ export default function SignIn() {
 
     try {
       const response = await base44.functions.invoke('login44', { username, password });
-      
+
       if (response.data.success) {
         navigate(createPageUrl('Dashboard'));
       } else {
@@ -36,117 +41,202 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div 
-          className="absolute w-96 h-96 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-500/20 blur-3xl"
-          style={{ top: '20%', left: '30%' }}
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
+    <div className="min-h-screen bg-[#0a0a14] flex flex-col items-center justify-center py-6 px-4 relative overflow-hidden">
+
+      {/* Ambient background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div
+          className="absolute w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px]"
+          style={{ top: '-10%', left: '10%' }}
+          animate={{ scale: [1, 1.15, 1], x: [0, 40, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.div 
-          className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-pink-500/15 to-violet-500/15 blur-3xl"
-          style={{ bottom: '20%', right: '30%' }}
-          animate={{
-            scale: [1.2, 1, 1.2],
-            x: [0, -50, 0],
-            y: [0, 30, 0],
-          }}
-          transition={{ duration: 6, repeat: Infinity, delay: 1 }}
+        <motion.div
+          className="absolute w-[400px] h-[400px] rounded-full bg-blue-500/10 blur-[100px]"
+          style={{ bottom: '-5%', right: '5%' }}
+          animate={{ scale: [1.1, 1, 1.1], x: [0, -30, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+        <motion.div
+          className="absolute w-[300px] h-[300px] rounded-full bg-pink-500/8 blur-[80px]"
+          style={{ top: '50%', right: '20%' }}
+          animate={{ scale: [1, 1.2, 1], y: [0, 30, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
         />
       </div>
 
+      {/* Card */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="relative w-full max-w-[440px]"
       >
-        <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/50 p-8 shadow-2xl">
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30 mb-4">
-              <AudioLines className="w-9 h-9 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              VoiceAI
-            </h1>
-            <p className="text-slate-400 text-sm mt-1">Creator Studio</p>
-          </div>
+        <div className="rounded-3xl border border-white/[0.07] bg-white/[0.03] backdrop-blur-2xl shadow-[0_32px_80px_rgba(0,0,0,0.6)] p-5 sm:p-7">
 
-          {/* Error message */}
+          {/* Logo + Branding */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="flex flex-col items-center mb-5"
+          >
+            {/* Icon */}
+            <div className="relative mb-3">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 blur-lg opacity-50 scale-110" />
+              <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-blue-600 flex items-center justify-center shadow-xl">
+                <AudioLines className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              </div>
+            </div>
+
+            {/* App name */}
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-300 via-purple-200 to-blue-300 bg-clip-text text-transparent">
+              Expressive Voice App
+            </h1>
+            <p className="text-slate-500 text-xs mt-1 tracking-wide uppercase">Creator Studio</p>
+
+            {/* Centralized login notice */}
+            <div className="mt-3 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-center">
+              <p className="text-violet-300/80 text-xs leading-relaxed">
+                Support Login and Members Dashboard Login's are Same.<br />
+                We use Centralized Login System.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Error */}
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3"
+              className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-2"
             >
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
               <p className="text-red-300 text-sm">{error}</p>
             </motion.div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-slate-300">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <Input
+          <motion.form
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25, duration: 0.5 }}
+            onSubmit={handleSubmit}
+            className="space-y-3"
+          >
+            {/* Username */}
+            <div className="space-y-1">
+              <label htmlFor="username" className="block text-sm text-slate-400 font-medium">
+                Username
+              </label>
+              <div className="relative group">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-violet-400 transition-colors duration-200" />
+                <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="pl-11 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
                   required
                   disabled={isLoading}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder:text-slate-600
+                    focus:outline-none focus:border-violet-500/60 focus:bg-violet-500/5 focus:ring-2 focus:ring-violet-500/15
+                    hover:border-white/[0.12] transition-all duration-200 disabled:opacity-50"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <Input
+            {/* Password */}
+            <div className="space-y-1">
+              <label htmlFor="password" className="block text-sm text-slate-400 font-medium">
+                Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-violet-400 transition-colors duration-200" />
+                <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="pl-11 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
                   required
                   disabled={isLoading}
+                  className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder:text-slate-600
+                    focus:outline-none focus:border-violet-500/60 focus:bg-violet-500/5 focus:ring-2 focus:ring-violet-500/15
+                    hover:border-white/[0.12] transition-all duration-200 disabled:opacity-50"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors duration-150"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
-            <Button
+            {/* Forgot Password */}
+            <div className="flex justify-end">
+              <a
+                href="https://users.prowebventures.com/login?sendpass"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-violet-400/80 hover:text-violet-300 transition-colors duration-150"
+              >
+                Forgot Password?
+              </a>
+            </div>
+
+            {/* Submit */}
+            <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+              className="relative w-full h-10 rounded-xl font-semibold text-white text-sm overflow-hidden
+                bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600
+                hover:from-violet-500 hover:via-purple-500 hover:to-blue-500
+                shadow-[0_8px_32px_rgba(124,58,237,0.35)] hover:shadow-[0_8px_40px_rgba(124,58,237,0.5)]
+                transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed
+                active:scale-[0.98]"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Signing in...
-                </>
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </span>
               ) : (
-                'Sign In'
+                <span className="flex items-center justify-center gap-2">
+                  Sign In
+                </span>
               )}
-            </Button>
-          </form>
+            </button>
+          </motion.form>
 
-          {/* Footer */}
-          <p className="text-center text-slate-500 text-sm mt-6">
-            Need help? <a href="mailto:support@example.com" className="text-violet-400 hover:text-violet-300">Contact Support</a>
-          </p>
+          {/* Footer links */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-4 pt-4 border-t border-white/[0.06]"
+          >
+            <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {FOOTER_LINKS.map((link, i) => (
+                <span key={link.href} className="contents">
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-slate-500 hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2"
+                  >
+                    {link.label}
+                  </a>
+                  {i < FOOTER_LINKS.length - 1 && (
+                    <span className="text-slate-700 text-xs select-none">·</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          </motion.div>
         </div>
       </motion.div>
     </div>

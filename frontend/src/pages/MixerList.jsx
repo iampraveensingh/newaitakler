@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -23,9 +23,40 @@ import EmptyState from '@/components/ui/EmptyState';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+const downloadFile = async (url, filename) => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'mix.mp3';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    console.error('Download failed:', e);
+    window.open(url, '_blank');
+  }
+};
+
 export default function MixerList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [playingId, setPlayingId] = useState(null);
+  const audioRef = useRef(new Audio());
+
+  const handlePlay = (mix) => {
+    if (!mix.output_url) return;
+    if (playingId === mix.id) {
+      audioRef.current.pause();
+      setPlayingId(null);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = mix.output_url;
+      audioRef.current.play().catch(() => setPlayingId(null));
+      audioRef.current.onended = () => setPlayingId(null);
+      setPlayingId(mix.id);
+    }
+  };
 
   const { data: mixes = [], isLoading } = useQuery({
     queryKey: ['mixes'],
@@ -102,13 +133,17 @@ export default function MixerList() {
                   <div className="flex items-center gap-4">
                     <button
                       disabled={mix.status !== 'completed'}
+                      onClick={() => handlePlay(mix)}
                       className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                         mix.status === 'completed'
                           ? 'bg-gradient-to-br from-indigo-500 to-violet-500 hover:scale-105 cursor-pointer'
                           : 'bg-slate-800 cursor-not-allowed'
                       }`}
                     >
-                      <Play className="w-5 h-5 text-white ml-0.5" />
+                      {playingId === mix.id
+                        ? <Pause className="w-5 h-5 text-white" />
+                        : <Play className="w-5 h-5 text-white ml-0.5" />
+                      }
                     </button>
 
                     <div className="flex-1 min-w-0">
@@ -127,11 +162,14 @@ export default function MixerList() {
 
                     <div className="flex items-center gap-2">
                       {mix.status === 'completed' && mix.output_url && (
-                        <a href={mix.output_url} download>
-                          <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white">
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        </a>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-slate-400 hover:text-white"
+                          onClick={() => downloadFile(mix.output_url, `${mix.name || 'mix'}.mp3`)}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

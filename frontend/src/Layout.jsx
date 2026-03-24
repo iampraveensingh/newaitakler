@@ -21,6 +21,8 @@ const navItems = [
     children: [
       { name: 'Create Voiceover', page: 'CreateVoiceover', emoji: '🎤' },
       { name: 'Voice Library', page: 'VoiceoverList', emoji: '📚' },
+      { name: 'Conversational Voice', page: 'CreateConversational', emoji: '👥' },
+      { name: 'My Conversations', page: 'ConversationalList', emoji: '💬' },
       { name: 'Clone Voice', page: 'CloneVoice', emoji: '🐑' },
       { name: 'My Clones', page: 'CloneList', emoji: '👯' },
       { name: 'Create Custom Voice', page: 'CreateCustomVoice', emoji: '✨' },
@@ -50,7 +52,16 @@ const navItems = [
   { name: 'Transcribe', icon: Video, page: 'Transcribe', emoji: '🎥' },
   { name: 'Agency', icon: Users, page: 'Agency', emoji: '🏢' },
   { name: 'Billing', icon: LayoutDashboard, page: 'Billing', emoji: '💳' },
-  { name: 'Support', icon: HelpCircle, page: 'Support', emoji: '❓' },
+  {
+    name: 'Support',
+    icon: HelpCircle,
+    emoji: '❓',
+    children: [
+      { name: 'Support Center', page: 'Support', emoji: '🆘' },
+      { name: 'Getting Started', page: 'GettingStarted', emoji: '📖' },
+      { name: 'Video Tutorials', page: 'VideoTutorials', emoji: '▶️' },
+    ]
+  },
 ];
 
 // Pages that don't require authentication (no sidebar/layout)
@@ -247,7 +258,7 @@ export default function Layout({ children, currentPageName }) {
           {(sidebarOpen || mobile) && (
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                VoiceAI
+                Expressive Voice
               </h1>
               <p className="text-xs text-slate-400">Creator Studio</p>
             </div>
@@ -284,7 +295,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
               <AudioLines className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">VoiceAI</span>
+            <span className="font-bold text-lg bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Expressive Voice</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

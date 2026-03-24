@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import {
@@ -32,6 +33,9 @@ const presets = [
 
 export default function AudioMixer() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
+
   const [projectName, setProjectName] = useState('');
   const [selectedVoiceovers, setSelectedVoiceovers] = useState([]);
   const [selectedMusic, setSelectedMusic] = useState('');
@@ -48,6 +52,25 @@ export default function AudioMixer() {
     queryFn: () => base44.entities.VoiceOver.filter({ status: 'completed' })
   });
 
+  // Load existing mix when editing
+  const { data: existingMix } = useQuery({
+    queryKey: ['mix', editId],
+    queryFn: () => base44.entities.AudioMix.get(editId),
+    enabled: !!editId
+  });
+
+  useEffect(() => {
+    if (existingMix) {
+      setProjectName(existingMix.name || '');
+      setSelectedVoiceovers(existingMix.voiceover_ids || []);
+      setSelectedMusic(existingMix.music_url || '');
+      setVoiceVolume(existingMix.voice_volume ?? 100);
+      setMusicVolume(existingMix.music_volume ?? 30);
+      setAutoDucking(existingMix.auto_ducking ?? true);
+      setPreset(existingMix.preset || 'custom');
+    }
+  }, [existingMix]);
+
   const createMixMutation = useMutation({
     mutationFn: (data) => base44.entities.AudioMix.create(data),
     onSuccess: async () => {
@@ -60,6 +83,15 @@ export default function AudioMixer() {
         queryClient.invalidateQueries({ queryKey: ['monthlyUsage'] });
       }
       toast.success('Audio mix created!');
+    }
+  });
+
+  const updateMixMutation = useMutation({
+    mutationFn: (data) => base44.entities.AudioMix.update(editId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mixes'] });
+      queryClient.invalidateQueries({ queryKey: ['mix', editId] });
+      toast.success('Audio mix updated!');
     }
   });
 
@@ -95,17 +127,22 @@ export default function AudioMixer() {
 
   const generateMix = async () => {
     setIsGenerating(true);
+    const data = {
+      name: projectName,
+      voiceover_ids: selectedVoiceovers,
+      music_url: selectedMusic,
+      voice_volume: voiceVolume,
+      music_volume: musicVolume,
+      auto_ducking: autoDucking,
+      preset: preset,
+      status: 'pending'
+    };
     try {
-      await createMixMutation.mutateAsync({
-        name: projectName,
-        voiceover_ids: selectedVoiceovers,
-        music_url: selectedMusic,
-        voice_volume: voiceVolume,
-        music_volume: musicVolume,
-        auto_ducking: autoDucking,
-        preset: preset,
-        status: 'pending'
-      });
+      if (editId) {
+        await updateMixMutation.mutateAsync(data);
+      } else {
+        await createMixMutation.mutateAsync(data);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -254,9 +291,9 @@ export default function AudioMixer() {
               className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 h-12"
             >
               {isGenerating ? (
-                <><RefreshCw className="w-5 h-5 mr-2 animate-spin" /> Mixing...</>
+                <><RefreshCw className="w-5 h-5 mr-2 animate-spin" /> {editId ? 'Updating...' : 'Mixing...'}</>
               ) : (
-                <><Music2 className="w-5 h-5 mr-2" /> Generate Mix</>
+                <><Music2 className="w-5 h-5 mr-2" /> {editId ? 'Update Mix' : 'Generate Mix'}</>
               )}
             </Button>
           </div>

@@ -143,7 +143,7 @@ function sanitize(body, allowedFields) {
   return result;
 }
 
-const JSON_FIELDS = ['addons', 'tags', 'variations', 'metadata', 'voiceover_ids', 'billing_product_ids'];
+const JSON_FIELDS = ['addons', 'tags', 'variations', 'metadata', 'voiceover_ids', 'billing_product_ids', 'speakers', 'segments'];
 
 function serializeJsonFields(obj) {
   for (const field of JSON_FIELDS) {

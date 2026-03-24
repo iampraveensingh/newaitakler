@@ -314,6 +314,31 @@ CREATE TABLE IF NOT EXISTS `transcriptions` (
 
 
 -- ─────────────────────────────────────────────────────────────
+-- CONVERSATIONAL_VOICES (Multi-speaker AI conversations)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `conversational_voices` (
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`     INT UNSIGNED NOT NULL,
+  `title`       VARCHAR(255) NULL,
+  `full_script` LONGTEXT     NULL    COMMENT 'Raw script entered by user',
+  `speakers`    JSON         NULL    COMMENT 'Array of speaker objects: [{label, voice_id, voice_name, voice_type}]',
+  `segments`    JSON         NULL    COMMENT 'Array of dialogue segments: [{text, speaker_label, voice_id, voice_name, voice_type}]',
+  `audio_url`   TEXT         NULL    COMMENT 'URL of the final generated mixed audio',
+  `duration`    DECIMAL(8,2) NULL    COMMENT 'Duration of generated audio in seconds',
+  `status`      ENUM('draft','processing','completed','failed') NOT NULL DEFAULT 'draft',
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_conv_user_id`    (`user_id`),
+  INDEX `idx_conv_status`     (`status`),
+  INDEX `idx_conv_created_at` (`created_at`),
+  CONSTRAINT `fk_conv_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: run this if the table already exists and needs to be added
+-- CREATE TABLE IF NOT EXISTS `conversational_voices` ... (same as above)
+
+
+-- ─────────────────────────────────────────────────────────────
 -- DFY_OFFERS (Admin-managed, read-only for users)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `dfy_offers` (
