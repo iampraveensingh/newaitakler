@@ -1,13 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AudioLines, Plus, Search, Filter, Play, Pause, Download,
+  AudioLines, Plus, Search, Filter, Download,
   Trash2, Star, MoreVertical, Tag, Clock, Copy
 } from 'lucide-react';
+import AudioWaveformPlayer from '@/components/audio/AudioWaveformPlayer';
+import DisabledWaveform from '@/components/audio/DisabledWaveform';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,9 +36,6 @@ export default function VoiceoverList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [playingId, setPlayingId] = useState(null);
-  const audioRef = useRef(new Audio());
-
   const handleDownload = async (vo) => {
     try {
       const response = await fetch(vo.audio_url);
@@ -51,23 +50,6 @@ export default function VoiceoverList() {
       URL.revokeObjectURL(url);
     } catch {
       toast.error('Download failed. Please try again.');
-    }
-  };
-
-  const handlePlay = (vo) => {
-    if (!vo.audio_url) {
-      toast.error('No audio available for this voiceover.');
-      return;
-    }
-    if (playingId === vo.id) {
-      audioRef.current.pause();
-      setPlayingId(null);
-    } else {
-      audioRef.current.pause();
-      audioRef.current.src = vo.audio_url;
-      audioRef.current.play().catch(() => setPlayingId(null));
-      audioRef.current.onended = () => setPlayingId(null);
-      setPlayingId(vo.id);
     }
   };
 
@@ -252,36 +234,37 @@ export default function VoiceoverList() {
                       )}
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-slate-700/50">
-                      <button
-                        onClick={() => handlePlay(vo)}
-                        disabled={vo.status !== 'completed'}
-                        className={`flex-1 h-10 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                          vo.status === 'completed'
-                            ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white cursor-pointer'
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        }`}
-                      >
-                        {playingId === vo.id ? (
-                          <><Pause className="w-4 h-4" /> Pause</>
-                        ) : (
-                          <><Play className="w-4 h-4" /> Play</>
-                        )}
-                      </button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => toggleFavoriteMutation.mutate({ id: vo.id, is_favorite: vo.is_favorite })}
-                        className="text-slate-400 hover:text-amber-400"
-                      >
-                        <Star className={`w-4 h-4 ${vo.is_favorite ? 'fill-amber-400 text-amber-400' : ''}`} />
-                      </Button>
-                      {vo.status === 'completed' && vo.audio_url && (
-                        <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white" onClick={() => handleDownload(vo)}>
-                          <Download className="w-4 h-4" />
-                        </Button>
+                    {/* Waveform Player */}
+                    <div className="pt-3 border-t border-slate-700/50">
+                      {vo.status === 'completed' && vo.audio_url ? (
+                        <AudioWaveformPlayer
+                          audioUrl={vo.audio_url}
+                          duration={vo.duration_seconds}
+                          compact
+                        />
+                      ) : (
+                        <DisabledWaveform
+                          compact
+                          label={vo.status === 'processing' ? 'Processing…' : vo.status === 'draft' ? 'Draft' : 'Unavailable'}
+                        />
                       )}
+
+                      {/* Secondary actions */}
+                      <div className="flex items-center justify-end gap-1 mt-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => toggleFavoriteMutation.mutate({ id: vo.id, is_favorite: vo.is_favorite })}
+                          className="text-slate-400 hover:text-amber-400"
+                        >
+                          <Star className={`w-4 h-4 ${vo.is_favorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+                        </Button>
+                        {vo.status === 'completed' && vo.audio_url && (
+                          <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white" onClick={() => handleDownload(vo)}>
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </GlassCard>

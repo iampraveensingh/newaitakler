@@ -391,6 +391,28 @@ UPDATE `plans` SET `priority` = 30 WHERE `name` = 'PRO';
 -- ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `credits_balance` INT NOT NULL DEFAULT 0 AFTER `agency_owner_id`;
 -- ALTER TABLE `users` ADD INDEX IF NOT EXISTS `idx_users_agency_owner` (`agency_owner_id`);
 -- ALTER TABLE `users` ADD CONSTRAINT IF NOT EXISTS `fk_users_agency_owner` FOREIGN KEY (`agency_owner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;
+-- ─────────────────────────────────────────────────────────────
+-- BRAND_STUDIO_PROJECTS
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `brand_studio_projects` (
+  `id`                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`             INT UNSIGNED NOT NULL,
+  `title`               VARCHAR(255) NULL,
+  `website_url`         TEXT         NULL,
+  `brand_voice_profile` JSON         NULL,
+  `vsl_script`          LONGTEXT     NULL,
+  `additional_scripts`  JSON         NULL,
+  `audio_url`           TEXT         NULL,
+  `duration_seconds`    DECIMAL(8,2) NULL,
+  `status`              ENUM('draft','processing','completed','failed') NOT NULL DEFAULT 'draft',
+  `created_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_bsp_user_id` (`user_id`),
+  INDEX `idx_bsp_status`  (`status`),
+  CONSTRAINT `fk_bsp_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- voice_clones: store the generated audio output produced from the clone
 ALTER TABLE `voice_clones`
   ADD COLUMN `audio_url` TEXT NULL

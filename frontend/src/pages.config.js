@@ -48,6 +48,9 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AdCopyList from './pages/AdCopyList';
+import BrandStudio from './pages/BrandStudio';
+import BrandStudioEdit from './pages/BrandStudioEdit';
+import BrandStudioList from './pages/BrandStudioList';
 import Agency from './pages/Agency';
 import AudioMixer from './pages/AudioMixer';
 import Billing from './pages/Billing';
@@ -88,6 +91,9 @@ export const PAGES = {
     "CreateVSL": CreateVSL,
     "CreateVoiceover": CreateVoiceover,
     "CustomVoiceList": CustomVoiceList,
+    "BrandStudio": BrandStudio,
+    "BrandStudioEdit": BrandStudioEdit,
+    "BrandStudioList": BrandStudioList,
     "DFYOffers": DFYOffers,
     "GettingStarted": GettingStarted,
     "Dashboard": Dashboard,

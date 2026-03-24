@@ -112,7 +112,7 @@ export default function CreateConversational() {
       full_script: script,
       segments,
       speakers,
-      status: 'processing'
+      status: 'pending'
     });
   };
 

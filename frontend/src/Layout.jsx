@@ -49,6 +49,15 @@ const navItems = [
       { name: 'Ad Copy Library', page: 'AdCopyList', emoji: '📄' },
     ]
   },
+  {
+    name: 'Brand Studio',
+    icon: Sparkles,
+    emoji: '🎨',
+    children: [
+      { name: 'New Brand Project', page: 'BrandStudio', emoji: '✨' },
+      { name: 'Brand Projects', page: 'BrandStudioList', emoji: '🗂️' },
+    ]
+  },
   { name: 'Transcribe', icon: Video, page: 'Transcribe', emoji: '🎥' },
   { name: 'Agency', icon: Users, page: 'Agency', emoji: '🏢' },
   { name: 'Billing', icon: LayoutDashboard, page: 'Billing', emoji: '💳' },
@@ -81,7 +90,7 @@ export default function Layout({ children, currentPageName }) {
   const hasAgency = addonsObj?.AGENCY === true || addonsObj?.agency === true;
 
   const isActive = (page) => {
-    return location.pathname.includes(page) || currentPageName === page;
+    return currentPageName === page || location.pathname === createPageUrl(page);
   };
 
   // Determine which menus should be expanded - MUST be before any conditional returns
@@ -165,6 +174,7 @@ export default function Layout({ children, currentPageName }) {
       return (
         <div>
           <button
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => toggleExpanded(item.name)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
               ${isExpanded ? 'bg-violet-500/10 text-violet-300' : 'text-slate-200 hover:text-white hover:bg-white/5'}`}
@@ -181,21 +191,24 @@ export default function Layout({ children, currentPageName }) {
               </>
             )}
           </button>
-          <AnimatePresence>
-            {isExpanded && sidebarOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden ml-4 mt-1 space-y-1 border-l border-slate-700/50 pl-3"
-              >
-                {item.children.map(child => (
-                  <NavItem key={child.page} item={child} depth={1} />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="overflow-hidden">
+            <AnimatePresence initial={false}>
+              {isExpanded && sidebarOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeInOut' }}
+                  className="ml-4 mt-1 space-y-1 border-l border-slate-700/50 pl-3"
+                  style={{ overflow: 'hidden' }}
+                >
+                  {item.children.map(child => (
+                    <NavItem key={child.page} item={child} depth={1} />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       );
     }
