@@ -144,14 +144,18 @@ export default function CreateVSL() {
     setShowOverlay(true);
     setIsGenerating(true);
 
+    // Normalise URL — prepend https:// if user omitted the protocol
+    let salesUrl = formData.sales_page_url.trim();
+    if (salesUrl && !salesUrl.startsWith('http')) salesUrl = 'https://' + salesUrl;
+
     // Scrape sales page if URL is provided
     let scrapedContext = '';
-    if (formData.sales_page_url) {
+    if (salesUrl) {
       setIsScraping(true);
       try {
-        const scraped = await base44.integrations.Core.ScrapePage({ url: formData.sales_page_url });
+        const scraped = await base44.integrations.Core.ScrapePage({ url: salesUrl });
         scrapedContext = `
-SCRAPED SALES PAGE CONTENT (from ${formData.sales_page_url}):
+SCRAPED SALES PAGE CONTENT (from ${salesUrl}):
 Page Title: ${scraped.title || ''}
 Meta Description: ${scraped.metaDescription || ''}
 Key Headings: ${scraped.headings?.join(' | ') || ''}
@@ -166,10 +170,11 @@ Use the above scraped content to write highly relevant, specific, and compelling
       }
     }
 
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Create 3 different Video Sales Letter (VSL) script variations for:
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Create 3 different Video Sales Letter (VSL) script variations for:
         Product: ${formData.product_name}
-        Sales Page URL: ${formData.sales_page_url || 'Not provided'}
+        Sales Page URL: ${salesUrl || 'Not provided'}
         Framework: ${formData.framework}
         Emotion: ${formData.emotion}
         Tone: ${formData.tone}
@@ -178,24 +183,32 @@ Use the above scraped content to write highly relevant, specific, and compelling
         Each script should include a hook, body following the ${formData.framework} framework, and a strong CTA.
         Make them natural, conversational, and optimized for video narration.
         Each variation should have a different angle or approach.`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          variation1: { type: 'string', description: 'Complete VSL script variation 1' },
-          variation2: { type: 'string', description: 'Complete VSL script variation 2' },
-          variation3: { type: 'string', description: 'Complete VSL script variation 3' }
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            variation1: { type: 'string', description: 'Complete VSL script variation 1' },
+            variation2: { type: 'string', description: 'Complete VSL script variation 2' },
+            variation3: { type: 'string', description: 'Complete VSL script variation 3' }
+          }
         }
-      }
-    });
-    setGeneratedScript({
-      variations: [
-    response?.variation1?.script || '',
-    response?.variation2?.script || '',
-    response?.variation3?.script || ''
-  ]
-    });
-    setShowOverlay(false);
-    setIsGenerating(false);
+      });
+      const extractText = (v) =>
+        typeof v === 'string' ? v : (v?.description || v?.text || v?.script || JSON.stringify(v) || '');
+
+      setGeneratedScript({
+        variations: [
+          extractText(response?.variation1),
+          extractText(response?.variation2),
+          extractText(response?.variation3),
+        ]
+      });
+    } catch (err) {
+      console.error('VSL generation failed:', err);
+      toast.error('Failed to generate VSL script. Please try again.');
+    } finally {
+      setShowOverlay(false);
+      setIsGenerating(false);
+    }
   };
 
   const regenerateVariation = async (index) => {

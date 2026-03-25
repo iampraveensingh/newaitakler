@@ -225,6 +225,11 @@ export const integrations = {
       return data.data; // { script, source, title }
     },
 
+    AnalyzeBrand: async ({ url }) => {
+      const { data } = await apiClient.post('/ai/brand-analyze', { url });
+      return data.data; // { brand_name, brand_voice_profile, vsl_script }
+    },
+
     UploadFile: async ({ file, track = true }) => {
       const formData = new FormData();
       formData.append('file', file);

@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { motion } from 'framer-motion';
 import {
   Music2, Play, Pause, Volume2, RefreshCw, Check
 } from 'lucide-react';
@@ -174,8 +173,16 @@ export default function AudioMixer() {
 
           {/* Select Voiceovers */}
           <GlassCard className="p-6" hover={false}>
-            <h3 className="text-lg font-semibold text-white mb-4">Select Voiceovers</h3>
-            
+            {/* Header — sticky inside the card */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Select Voiceovers</h3>
+              {selectedVoiceovers.length > 0 && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  {selectedVoiceovers.length} selected
+                </span>
+              )}
+            </div>
+
             {voiceovers.length === 0 ? (
               <div className="text-center py-8">
                 <Volume2 className="w-12 h-12 mx-auto text-slate-600 mb-3" />
@@ -185,7 +192,10 @@ export default function AudioMixer() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div
+                className="space-y-2 overflow-y-auto pr-1 mixer-voiceover-list"
+                style={{ maxHeight: '320px' }}
+              >
                 {voiceovers.map(vo => (
                   <button
                     key={vo.id}
@@ -196,24 +206,37 @@ export default function AudioMixer() {
                         : 'border-slate-700 hover:border-slate-600'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center ${
                       selectedVoiceovers.includes(vo.id)
                         ? 'bg-violet-500 text-white'
                         : 'bg-slate-800'
                     }`}>
                       {selectedVoiceovers.includes(vo.id) && <Check className="w-4 h-4" />}
                     </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-medium text-white">{vo.title}</p>
-                      <p className="text-sm text-slate-400">{vo.voice_name || 'Default Voice'}</p>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="font-medium text-white truncate">{vo.title}</p>
+                      <p className="text-sm text-slate-400 truncate">{vo.voice_name || 'Default Voice'}</p>
                     </div>
-                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white" onClick={(e) => handlePlay(e, vo)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-slate-400 hover:text-white flex-shrink-0"
+                      onClick={(e) => handlePlay(e, vo)}
+                    >
                       {playingId === vo.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </Button>
                   </button>
                 ))}
               </div>
             )}
+
+            <style>{`
+              .mixer-voiceover-list::-webkit-scrollbar { width: 5px; }
+              .mixer-voiceover-list::-webkit-scrollbar-track { background: transparent; }
+              .mixer-voiceover-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+              .mixer-voiceover-list::-webkit-scrollbar-thumb:hover { background: #475569; }
+              .mixer-voiceover-list { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+            `}</style>
           </GlassCard>
 
           {/* Background Music */}

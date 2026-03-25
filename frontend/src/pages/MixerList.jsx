@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Music2, Plus, Search, Play, Pause, Download, Trash2, 
+import {
+  Music2, Plus, Search, Download, Trash2,
   MoreVertical, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
+import AudioWaveformPlayer from '@/components/audio/AudioWaveformPlayer';
+import DisabledWaveform from '@/components/audio/DisabledWaveform';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -41,22 +43,6 @@ const downloadFile = async (url, filename) => {
 export default function MixerList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [playingId, setPlayingId] = useState(null);
-  const audioRef = useRef(new Audio());
-
-  const handlePlay = (mix) => {
-    if (!mix.output_url) return;
-    if (playingId === mix.id) {
-      audioRef.current.pause();
-      setPlayingId(null);
-    } else {
-      audioRef.current.pause();
-      audioRef.current.src = mix.output_url;
-      audioRef.current.play().catch(() => setPlayingId(null));
-      audioRef.current.onended = () => setPlayingId(null);
-      setPlayingId(mix.id);
-    }
-  };
 
   const { data: mixes = [], isLoading } = useQuery({
     queryKey: ['mixes'],
@@ -130,37 +116,27 @@ export default function MixerList() {
                 exit={{ opacity: 0, y: -20 }}
               >
                 <GlassCard className="p-5">
-                  <div className="flex items-center gap-4">
-                    <button
-                      disabled={mix.status !== 'completed'}
-                      onClick={() => handlePlay(mix)}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                        mix.status === 'completed'
-                          ? 'bg-gradient-to-br from-indigo-500 to-violet-500 hover:scale-105 cursor-pointer'
-                          : 'bg-slate-800 cursor-not-allowed'
-                      }`}
-                    >
-                      {playingId === mix.id
-                        ? <Pause className="w-5 h-5 text-white" />
-                        : <Play className="w-5 h-5 text-white ml-0.5" />
-                      }
-                    </button>
+                  {/* Header row */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center flex-shrink-0">
+                      <Music2 className="w-5 h-5 text-white" />
+                    </div>
 
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-white truncate">{mix.name || 'Untitled Mix'}</h3>
                       <div className="flex flex-wrap items-center gap-3 text-sm mt-1">
                         <StatusBadge status={mix.status} size="sm" />
-                        <span className="text-slate-300 flex items-center gap-1">
+                        <span className="text-slate-400 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
                           {format(new Date(mix.created_at), 'MMM d, yyyy')}
                         </span>
                         {mix.preset && mix.preset !== 'custom' && (
-                          <span className="text-slate-300 capitalize">Preset: {mix.preset}</span>
+                          <span className="text-slate-400 capitalize">Preset: {mix.preset}</span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       {mix.status === 'completed' && mix.output_url && (
                         <Button
                           size="icon"
@@ -183,7 +159,7 @@ export default function MixerList() {
                               Edit
                             </DropdownMenuItem>
                           </Link>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => deleteMutation.mutate(mix.id)}
                             className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
                           >
@@ -192,6 +168,22 @@ export default function MixerList() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                  </div>
+
+                  {/* Waveform row */}
+                  <div className="pt-3 border-t border-slate-700/50">
+                    {mix.status === 'completed' && mix.output_url ? (
+                      <AudioWaveformPlayer audioUrl={mix.output_url} compact />
+                    ) : (
+                      <DisabledWaveform
+                        compact
+                        label={
+                          mix.status === 'processing' ? 'Processing…'
+                          : mix.status === 'pending'    ? 'Pending…'
+                          : 'Unavailable'
+                        }
+                      />
+                    )}
                   </div>
                 </GlassCard>
               </motion.div>
