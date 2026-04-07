@@ -1,14 +1,26 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, PenTool, Video, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { FileText, PenTool, Video, ArrowRight, Check, Sparkles, Layers, MessageSquare, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GlassCard from '@/components/ui/GlassCard';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/api/base44Client';
 
 const addonConfig = {
+  brand_studio: {
+    title: 'Unlock Brand Studio',
+    description: 'Create branded voiceovers with your unique voice profile',
+    icon: Layers,
+    gradient: 'from-violet-500 to-purple-500',
+    bgGradient: 'from-violet-900/40 via-purple-900/30 to-fuchsia-900/20',
+    borderColor: 'border-violet-500/30',
+    addonKey: 'brand_studio',
+    benefits: [
+      'Brand voice profiles',
+      'Multi-script projects',
+      'Website analysis',
+      'Custom voiceovers',
+    ],
+  },
   vsl: {
     title: 'Unlock VSL Edition',
     description: 'Get unlimited VSL scripts and advanced features',
@@ -16,8 +28,7 @@ const addonConfig = {
     gradient: 'from-rose-500 to-pink-500',
     bgGradient: 'from-rose-900/40 via-pink-900/30 to-fuchsia-900/20',
     borderColor: 'border-rose-500/30',
-    // objectKeys: API addon object keys that unlock this feature (checked case-insensitively)
-    objectKeys: ['vsl', 'VSL'],
+    addonKey: 'vsl',
     benefits: [
       'Unlimited VSL scripts',
       'Advanced frameworks',
@@ -32,7 +43,7 @@ const addonConfig = {
     gradient: 'from-indigo-500 to-blue-500',
     bgGradient: 'from-indigo-900/40 via-blue-900/30 to-cyan-900/20',
     borderColor: 'border-indigo-500/30',
-    objectKeys: ['adcopy', 'ADCOPY', 'ad_copy'],
+    addonKey: 'adcopy',
     benefits: [
       'Unlimited ad copies',
       'All platforms supported',
@@ -47,7 +58,7 @@ const addonConfig = {
     gradient: 'from-emerald-500 to-teal-500',
     bgGradient: 'from-emerald-900/40 via-teal-900/30 to-cyan-900/20',
     borderColor: 'border-emerald-500/30',
-    objectKeys: ['transcribe', 'TRANSCRIBE', 'transcriber'],
+    addonKey: 'transcriber',
     benefits: [
       'Unlimited transcriptions',
       'All output formats',
@@ -55,48 +66,66 @@ const addonConfig = {
       'Key highlights',
     ],
   },
+  conversational: {
+    title: 'Unlock Conversational Edition',
+    description: 'Create dynamic multi-speaker audio conversations',
+    icon: MessageSquare,
+    gradient: 'from-fuchsia-500 to-pink-500',
+    bgGradient: 'from-fuchsia-900/40 via-pink-900/30 to-rose-900/20',
+    borderColor: 'border-fuchsia-500/30',
+    addonKey: 'conversational',
+    benefits: [
+      'Multi-speaker audio',
+      'Natural dialogues',
+      'Custom voices',
+      'Export options',
+    ],
+  },
+  audio_mix: {
+    title: 'Unlock Audio Mixer',
+    description: 'Mix voiceovers with background music professionally',
+    icon: Music2,
+    gradient: 'from-amber-500 to-orange-500',
+    bgGradient: 'from-amber-900/40 via-orange-900/30 to-red-900/20',
+    borderColor: 'border-amber-500/30',
+    addonKey: 'audio_mix',
+    benefits: [
+      'Voice + music mixing',
+      'Volume controls',
+      'Multiple tracks',
+      'Professional export',
+    ],
+  },
 };
 
 export default function AddonUpgradeCard({ type, addons }) {
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => auth.me(),
-    staleTime: 5 * 60 * 1000,
-  });
-
   const config = addonConfig[type];
   if (!config) return null;
 
-  // Agency sub-users cannot upgrade — managed by their agency admin
-  if (currentUser?.agency_owner_id) return null;
+  const addonsArray = Array.isArray(addons) ? addons : [];
+  const hasAddon = addonsArray.includes(config.addonKey);
 
-  // addons from API is an object { transcribe: true, agency: true, ... }
-  // Check all possible key variants for this addon type
-  const addonsObj = currentUser?.addons ?? {};
-  const hasAddon = config.objectKeys.some(key => addonsObj[key] === true);
-
-  // If user already has the addon, don't show the upgrade card
   if (hasAddon) return null;
 
   const Icon = config.icon;
 
   return (
-    <GlassCard 
-      className={`p-6 bg-gradient-to-br ${config.bgGradient} ${config.borderColor} relative overflow-hidden`} 
+    <GlassCard
+      className={`p-6 bg-gradient-to-br ${config.bgGradient} ${config.borderColor} relative overflow-hidden`}
       hover={false}
     >
       {/* Background effects */}
       <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-white/5 to-white/0 rounded-full blur-3xl" />
-      
+
       <div className="relative flex flex-col md:flex-row md:items-center gap-5">
-        <motion.div 
+        <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ duration: 3, repeat: Infinity }}
           className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg shrink-0`}
         >
           <Icon className="w-7 h-7 text-white" />
         </motion.div>
-        
+
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-xl font-bold text-white">{config.title}</h3>
@@ -105,7 +134,7 @@ export default function AddonUpgradeCard({ type, addons }) {
             </span>
           </div>
           <p className="text-slate-400 mb-4">{config.description}</p>
-          
+
           <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4">
             {config.benefits.map((benefit, idx) => (
               <div key={idx} className="flex items-center gap-2">

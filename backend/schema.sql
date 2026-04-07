@@ -40,15 +40,18 @@ CREATE TABLE IF NOT EXISTS `plan_limits` (
   `ad`              INT          NOT NULL DEFAULT 15    COMMENT 'Ad copies per month',
   `custom`          INT          NOT NULL DEFAULT 2     COMMENT 'Custom voices per month',
   `transcriptions`  INT          NOT NULL DEFAULT 10    COMMENT 'Transcriptions per month',
+  `brand_studio`    INT          NOT NULL DEFAULT 5     COMMENT 'Brand Studio projects per month',
+  `conversational`  INT          NOT NULL DEFAULT 5     COMMENT 'Conversational audios per month',
+  `audio_mix`       INT          NOT NULL DEFAULT 10    COMMENT 'Audio mixes per month',
   `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_plan_limits_plan_id` (`plan_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO `plan_limits` (`plan_id`, `credits`, `clones`, `vsl`, `ad`, `custom`, `transcriptions`) VALUES
-  ('FE',     1000, 3,   10,  15, 2,  10),
-  ('PRO',    5000, 10,  50,  50, 10, 50),
-  ('XTREME', 9999, 99, 999, 999, 99, 999);
+INSERT IGNORE INTO `plan_limits` (`plan_id`, `credits`, `clones`, `vsl`, `ad`, `custom`, `transcriptions`, `brand_studio`, `conversational`, `audio_mix`) VALUES
+  ('FE',     1000, 3,   10,  15, 2,  10,  5,   5,   10),
+  ('PRO',    5000, 10,  50,  50, 10, 50,  25,  25,  50),
+  ('XTREME', 9999, 99, 999, 999, 99, 999, 999, 999, 999);
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -112,6 +115,9 @@ CREATE TABLE IF NOT EXISTS `user_usage_monthly` (
   `ad_used`              INT          NOT NULL DEFAULT 0,
   `custom_used`          INT          NOT NULL DEFAULT 0,
   `transcriptions_used`  INT          NOT NULL DEFAULT 0,
+  `brand_studio_used`    INT          NOT NULL DEFAULT 0,
+  `conversational_used`  INT          NOT NULL DEFAULT 0,
+  `audio_mix_used`       INT          NOT NULL DEFAULT 0,
   `created_at`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_usage_user_month` (`user_id`, `month_year`),
@@ -136,8 +142,10 @@ CREATE TABLE IF NOT EXISTS `voiceovers` (
   `emotion_strength` ENUM('soft','medium','strong') NOT NULL DEFAULT 'medium',
   `scene_mode`       VARCHAR(50)  NULL DEFAULT 'casual',
   `voice_consistency` TINYINT(1)  NOT NULL DEFAULT 1,
-  `background_music` VARCHAR(255) NULL,
-  `audio_url`        TEXT         NULL,
+  `background_music`         VARCHAR(255) NULL,
+  `background_music_enabled` TINYINT(1)   NOT NULL DEFAULT 0,
+  `background_music_volume`  INT          NOT NULL DEFAULT 30,
+  `audio_url`                TEXT         NULL,
   `duration_seconds` DECIMAL(8,2) NULL,
   `status`           ENUM('draft','processing','completed','failed') NOT NULL DEFAULT 'draft',
   `is_favorite`      TINYINT(1)   NOT NULL DEFAULT 0,
@@ -401,6 +409,7 @@ CREATE TABLE IF NOT EXISTS `brand_studio_projects` (
   `website_url`         TEXT         NULL,
   `brand_voice_profile` JSON         NULL,
   `vsl_script`          LONGTEXT     NULL,
+  `voice_prompt`        TEXT         NULL,
   `additional_scripts`  JSON         NULL,
   `audio_url`           TEXT         NULL,
   `duration_seconds`    DECIMAL(8,2) NULL,
@@ -424,3 +433,125 @@ ALTER TABLE `custom_voices`
   ADD COLUMN `audio_url` TEXT NULL
   COMMENT 'URL of the generated audio output for this custom voice'
   AFTER `test_script`;
+
+-- voiceovers: background music enabled flag + volume level
+ALTER TABLE `voiceovers`
+  ADD COLUMN IF NOT EXISTS `background_music_enabled` TINYINT(1) NOT NULL DEFAULT 0
+  AFTER `background_music`;
+ALTER TABLE `voiceovers`
+  ADD COLUMN IF NOT EXISTS `background_music_volume` INT NOT NULL DEFAULT 30
+  AFTER `background_music_enabled`;
+
+-- brand_studio_projects: dedicated voice prompt column
+ALTER TABLE `brand_studio_projects`
+  ADD COLUMN IF NOT EXISTS `voice_prompt` TEXT NULL
+  AFTER `vsl_script`;
+
+-- ─────────────────────────────────────────────────────────────
+-- MIGRATION: Add new usage columns to existing tables
+-- Run these if the tables already exist
+-- ─────────────────────────────────────────────────────────────
+ALTER TABLE `user_usage_monthly`
+  ADD COLUMN IF NOT EXISTS `brand_studio_used`   INT NOT NULL DEFAULT 0 AFTER `transcriptions_used`,
+  ADD COLUMN IF NOT EXISTS `conversational_used` INT NOT NULL DEFAULT 0 AFTER `brand_studio_used`,
+  ADD COLUMN IF NOT EXISTS `audio_mix_used`      INT NOT NULL DEFAULT 0 AFTER `conversational_used`;
+
+ALTER TABLE `plan_limits`
+  ADD COLUMN IF NOT EXISTS `brand_studio`   INT NOT NULL DEFAULT 5   AFTER `transcriptions`,
+  ADD COLUMN IF NOT EXISTS `conversational` INT NOT NULL DEFAULT 5   AFTER `brand_studio`,
+  ADD COLUMN IF NOT EXISTS `audio_mix`      INT NOT NULL DEFAULT 10  AFTER `conversational`;
+
+UPDATE `plan_limits` SET `brand_studio` = 5,   `conversational` = 5,   `audio_mix` = 10  WHERE `plan_id` = 'FE'     AND `brand_studio` = 5;
+UPDATE `plan_limits` SET `brand_studio` = 25,  `conversational` = 25,  `audio_mix` = 50  WHERE `plan_id` = 'PRO'    AND `brand_studio` = 5;
+UPDATE `plan_limits` SET `brand_studio` = 999, `conversational` = 999, `audio_mix` = 999 WHERE `plan_id` = 'XTREME' AND `brand_studio` = 5;
+
+-- ─────────────────────────────────────────────────────────────
+-- NOTIFICATIONS
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id`          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`     BIGINT UNSIGNED NOT NULL,
+  `type`        VARCHAR(50)  NOT NULL,
+  `title`       VARCHAR(255) NOT NULL,
+  `message`     TEXT         NULL,
+  `icon`        VARCHAR(10)  NULL,
+  `entity_id`   BIGINT UNSIGNED NULL,
+  `entity_type` VARCHAR(100) NULL,
+  `is_read`     TINYINT(1)   NOT NULL DEFAULT 0,
+  `is_deleted`  TINYINT(1)   NOT NULL DEFAULT 0,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_notif_user_created` (`user_id`, `created_at` DESC),
+  INDEX `idx_notif_user_unread`  (`user_id`, `is_read`),
+  CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- MIGRATION: soft-delete support for existing notifications table
+ALTER TABLE `notifications`
+  ADD COLUMN IF NOT EXISTS `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_read`;
+
+-- ─────────────────────────────────────────────────────────────
+-- SYSTEM VOICES (shared/admin-managed, no user_id)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `system_voices` (
+  `id`          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name`        VARCHAR(100) NOT NULL,
+  `type`        VARCHAR(50)  NOT NULL,
+  `description` VARCHAR(255) NULL,
+  `audio_url`   TEXT         NULL,
+  `is_active`   TINYINT(1)   NOT NULL DEFAULT 1,
+  `sort_order`  INT          NOT NULL DEFAULT 0,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_sv_type`   (`type`),
+  INDEX `idx_sv_active` (`is_active`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed: system voices with updated categories
+INSERT IGNORE INTO `system_voices` (`name`, `type`, `description`, `audio_url`, `sort_order`) VALUES
+  ('Sarah',         'conversational', 'Warm & friendly',        'https://staging.prowebventures.com/music/sarah.wav',   1),
+  ('Olivia',        'conversational', 'Empathetic tone',        'https://staging.prowebventures.com/music/Olivia.wav',  2),
+  ('Mia',           'conversational', 'Gentle & caring',        'https://staging.prowebventures.com/music/Mia.wav',     3),
+  ('Emma',          'narration',      'Calm & soothing',        'https://staging.prowebventures.com/music/emma.wav',    4),
+  ('Nicole',        'narration',      'Deep & rich',            'https://staging.prowebventures.com/music/Nicole.wav',  5),
+  ('Michael (PM)',  'narration',      'Authoritative narrator', 'https://staging.prowebventures.com/music/Michael.wav', 6),
+  ('Ivy',           'narration',      'Storyteller',            'https://staging.prowebventures.com/music/Ivy.wav',     7),
+  ('Felix',         'characters',     'Dramatic flair',         'https://staging.prowebventures.com/music/Felix.wav',   8),
+  ('Zoe',           'characters',     'Versatile artist',       'https://staging.prowebventures.com/music/Zoe.wav',     9),
+  ('James',         'educational',    'News anchor style',      'https://staging.prowebventures.com/music/James.wav',   10),
+  ('Alex',          'advertisement',  'Clear & confident',      'https://staging.prowebventures.com/music/Alex.wav',    11),
+  ('David',         'advertisement',  'Energetic presenter',    'https://staging.prowebventures.com/music/David.wav',   12),
+  ('Robert',        'advertisement',  'Corporate tone',         'https://staging.prowebventures.com/music/emma.wav',    13),
+  ('Aria',          'entertainment',  'Dynamic range',          'https://staging.prowebventures.com/music/Aria.wav',    14),
+  ('Max',           'entertainment',  'Animated & fun',         'https://staging.prowebventures.com/music/Max.wav',     15);
+
+
+-- ─────────────────────────────────────────────────────────────
+-- AUDIOBOOKS
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `audiobooks` (
+  `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`       INT UNSIGNED NOT NULL,
+  `title`         VARCHAR(255) NOT NULL,
+  `original_file` VARCHAR(255) NULL        COMMENT 'Original uploaded filename',
+  `file_url`      TEXT         NULL        COMMENT 'Uploaded file URL',
+  `voice_id`      VARCHAR(255) NULL,
+  `voice_name`    VARCHAR(255) NULL,
+  `voice_type`    VARCHAR(100) NULL,
+  `voice_url`     TEXT         NULL,
+  `language`      VARCHAR(10)  NOT NULL DEFAULT 'en',
+  `audio_url`     TEXT         NULL        COMMENT 'Generated audiobook output URL',
+  `status`        ENUM('draft','processing','completed','failed') NOT NULL DEFAULT 'draft',
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_ab_user_id` (`user_id`),
+  INDEX `idx_ab_status`  (`status`),
+  CONSTRAINT `fk_ab_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- MIGRATION: for existing tables created before the simplified schema
+ALTER TABLE `audiobooks`
+  ADD COLUMN IF NOT EXISTS `file_url`      TEXT        NULL        AFTER `original_file`,
+  ADD COLUMN IF NOT EXISTS `language`      VARCHAR(10) NOT NULL DEFAULT 'en' AFTER `voice_url`,
+  ADD COLUMN IF NOT EXISTS `audio_url`     TEXT        NULL        AFTER `language`,
+  DROP COLUMN IF EXISTS `parsed_text`,
+  DROP COLUMN IF EXISTS `chapters`;

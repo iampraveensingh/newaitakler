@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
 import {
   Music2, Play, Pause, Volume2, RefreshCw, Check
 } from 'lucide-react';
 import BackgroundMusicSection from '@/components/voice/BackgroundMusicSection';
+import GenerateMixOverlay from '@/components/voice/GenerateMixOverlay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +34,7 @@ const presets = [
 
 export default function AudioMixer() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
 
@@ -43,6 +46,7 @@ export default function AudioMixer() {
   const [autoDucking, setAutoDucking] = useState(true);
   const [preset, setPreset] = useState('custom');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
   const [playingId, setPlayingId] = useState(null);
   const audioRef = useRef(new Audio());
 
@@ -75,7 +79,7 @@ export default function AudioMixer() {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['mixes'] });
       try {
-        await base44.trackUsage('credits', 1);
+        await base44.trackUsage('audio_mix', 1);
       } catch (e) {
         console.warn('Usage tracking failed:', e);
       } finally {
@@ -125,7 +129,16 @@ export default function AudioMixer() {
   };
 
   const generateMix = async () => {
+    if (!projectName.trim()) {
+      toast.error('Please enter a project name.');
+      return;
+    }
+    if (selectedVoiceovers.length === 0) {
+      toast.error('Please select at least one voiceover.');
+      return;
+    }
     setIsGenerating(true);
+    setShowOverlay(true);
     const data = {
       name: projectName,
       voiceover_ids: selectedVoiceovers,
@@ -142,12 +155,22 @@ export default function AudioMixer() {
       } else {
         await createMixMutation.mutateAsync(data);
       }
-    } finally {
+    } catch {
       setIsGenerating(false);
+      setShowOverlay(false);
     }
   };
 
   return (
+    <>
+    <GenerateMixOverlay
+      isVisible={showOverlay}
+      onComplete={() => {
+        setShowOverlay(false);
+        setIsGenerating(false);
+        navigate(createPageUrl('MixerList'));
+      }}
+    />
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Audio Mixer"
@@ -323,5 +346,6 @@ export default function AudioMixer() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -38,8 +38,13 @@ function UserFormDialog({ open, onClose, onSubmit, isLoading, editUser = null })
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.username.trim()) { toast.error('Username is required'); return; }
+    if (form.username.trim().length < 3) { toast.error('Username must be at least 3 characters'); return; }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(form.username.trim())) { toast.error('Username can only contain letters, numbers, underscores, dots, and hyphens'); return; }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Please enter a valid email address'); return; }
     if (!isEdit && !form.password.trim()) { toast.error('Password is required'); return; }
     if (!isEdit && form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (isEdit && form.password && form.password.length < 6) { toast.error('New password must be at least 6 characters'); return; }
+    if (form.credits_balance < 0) { toast.error('Credits balance cannot be negative'); return; }
     onSubmit(form);
   };
 
@@ -159,7 +164,11 @@ function AllocateCreditsDialog({ open, onClose, user, onSubmit, isLoading }) {
           </DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={e => { e.preventDefault(); onSubmit(amount); }}
+          onSubmit={e => {
+            e.preventDefault();
+            if (amount < 0) { toast.error('Credits cannot be negative'); return; }
+            onSubmit(amount);
+          }}
           className="space-y-4 mt-2"
         >
           <div className="space-y-1.5">

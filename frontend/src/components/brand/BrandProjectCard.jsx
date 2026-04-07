@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Globe, Volume2, Clock, MoreVertical, Trash2, Edit, Download } from 'lucide-react';
+import { Globe, Volume2, Clock, MoreVertical, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,7 +16,8 @@ import DisabledWaveform from '@/components/audio/DisabledWaveform';
 import { format } from 'date-fns';
 
 export default function BrandProjectCard({ project, onDelete, onDownload }) {
-  const profile = project?.brand_voice_profile || {};
+  const navigate = useNavigate();
+  const profile  = project?.brand_voice_profile || {};
 
   const handleDownload = async () => {
     if (!project?.audio_url) return;
@@ -43,7 +44,10 @@ export default function BrandProjectCard({ project, onDelete, onDownload }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      <GlassCard className="p-5 h-full">
+      <GlassCard
+        className="p-5 h-full cursor-pointer"
+        onClick={() => navigate(createPageUrl(`BrandStudioEdit?id=${project.id}`))}
+      >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
@@ -54,24 +58,19 @@ export default function BrandProjectCard({ project, onDelete, onDownload }) {
               </div>
             </div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
                 <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white -mt-1 -mr-2">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-                <Link to={createPageUrl(`BrandStudioEdit?id=${project.id}`)}>
-                  <DropdownMenuItem className="text-slate-200 focus:text-white focus:bg-slate-700">
-                    <Edit className="w-4 h-4 mr-2" /> Edit
-                  </DropdownMenuItem>
-                </Link>
-                {project.status === 'completed' && project.audio_url && (
-                  <DropdownMenuItem onClick={handleDownload} className="text-slate-200 focus:text-white focus:bg-slate-700">
+                {project.audio_url && (
+                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleDownload(); }} className="text-slate-200 focus:text-white focus:bg-slate-700">
                     <Download className="w-4 h-4 mr-2" /> Download
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
-                  onClick={() => onDelete?.(project.id)}
+                  onClick={e => { e.stopPropagation(); onDelete?.(project.id); }}
                   className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
                 >
                   <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -101,12 +100,12 @@ export default function BrandProjectCard({ project, onDelete, onDownload }) {
           </div>
 
           {/* Waveform */}
-          <div className="pt-3 border-t border-slate-700/50">
-            {project.status === 'completed' && project.audio_url ? (
+          <div className="pt-3 border-t border-slate-700/50" onClick={e => e.stopPropagation()}>
+            {project.audio_url ? (
               <AudioWaveformPlayer audioUrl={project.audio_url} duration={project.duration_seconds} compact />
             ) : (
               <DisabledWaveform compact label={
-                project.status === 'processing' ? 'Processing…' :
+                project.status === 'pending' || project.status === 'processing' ? 'Processing…' :
                 project.status === 'draft' ? 'Draft' : 'Unavailable'
               } />
             )}

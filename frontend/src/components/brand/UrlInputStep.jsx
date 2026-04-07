@@ -1,17 +1,27 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Sparkles, ArrowRight, Loader2, Zap } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Loader2, Zap, ScanSearch, Mic2, FileText, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GlassCard from '@/components/ui/GlassCard';
+import { toast } from 'sonner';
 
 export default function UrlInputStep({ onSubmit, isLoading }) {
   const [url, setUrl] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!url.trim()) return;
-    let formatted = url.trim();
+    const trimmed = url.trim();
+    if (!trimmed) {
+      toast.error('Please enter a website URL.');
+      return;
+    }
+    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w]{2,}(\/\S*)?$/i;
+    if (!urlPattern.test(trimmed)) {
+      toast.error('Please enter a valid URL (e.g. https://example.com).');
+      return;
+    }
+    let formatted = trimmed;
     if (!formatted.startsWith('http')) formatted = 'https://' + formatted;
     onSubmit(formatted);
   };
@@ -116,15 +126,21 @@ export default function UrlInputStep({ onSubmit, isLoading }) {
         transition={{ delay: 0.7 }}
         className="relative z-10 flex flex-wrap justify-center gap-3 mt-8"
       >
-        {['AI Website Analysis', 'Brand Voice Creation', 'VSL Script Generator', 'One-Click Voiceover'].map((f, i) => (
+        {[
+          { label: 'AI Website Analysis',  icon: ScanSearch, color: 'text-cyan-400',   bg: 'bg-cyan-500/10   border-cyan-500/25'   },
+          { label: 'Brand Voice Creation', icon: Mic2,       color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/25' },
+          { label: 'VSL Script Generator', icon: FileText,   color: 'text-pink-400',   bg: 'bg-pink-500/10   border-pink-500/25'   },
+          { label: 'One-Click Voiceover',  icon: Volume2,    color: 'text-emerald-400',bg: 'bg-emerald-500/10 border-emerald-500/25'},
+        ].map(({ label, icon: Icon, color, bg }, i) => (
           <motion.span
-            key={f}
+            key={label}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.8 + i * 0.1 }}
-            className="px-4 py-2 rounded-full text-sm bg-slate-800/60 border border-slate-700/50 text-slate-300"
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm border ${bg} text-slate-300`}
           >
-            {f}
+            <Icon className={`w-3.5 h-3.5 ${color}`} />
+            {label}
           </motion.span>
         ))}
       </motion.div>

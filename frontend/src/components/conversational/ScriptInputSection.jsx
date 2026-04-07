@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, Wand2, Upload, Keyboard, RefreshCw } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -121,9 +121,12 @@ Rules:
               <div className="flex-1 max-w-[200px]">
                 <Label className="text-slate-300 mb-2 block text-sm">Number of Speakers</Label>
                 <Input
-                  type="number" min="2" max="6"
+                  type="number" min="2" max="5"
                   value={speakerCount}
-                  onChange={(e) => setSpeakerCount(e.target.value)}
+                  onChange={(e) => {
+                    const v = Math.min(5, Math.max(2, parseInt(e.target.value) || 2));
+                    setSpeakerCount(String(v));
+                  }}
                   className="bg-slate-800/50 border-slate-700 text-white h-10"
                 />
               </div>

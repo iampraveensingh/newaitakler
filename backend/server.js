@@ -2,11 +2,15 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import { createServer } from 'http';
 import { fileURLToPath } from 'url';
+import { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
 import { testConnection } from './config/database.js';
 import { initCronJobs } from './utils/cron.js';
 import { verifyToken } from './middleware/auth.js';
 import { buildEntityRouter } from './routes/entityRouter.js';
+import { registerConnection, removeConnection } from './utils/wsManager.js';
 
 // Route imports
 import authRoutes from './routes/auth.js';
@@ -19,6 +23,8 @@ import scrapeRoutes from './routes/scrape.js';
 import extractScriptRoutes from './routes/extractScript.js';
 import backgroundMusicRoutes from './routes/backgroundMusic.js';
 import voiceCloneRoutes from './routes/voiceClones.js';
+import notificationRoutes from './routes/notifications.js';
+import systemVoicesRoutes from './routes/systemVoices.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -41,7 +47,8 @@ app.use('/music', express.static(path.join(__dirname, 'music')));
 const voiceoverRoutes = buildEntityRouter('voiceovers', [
   'title', 'keywords', 'script', 'script_source', 'voice_type', 'voice_id', 'voice_name', 'voice_url',
   'language', 'emotion', 'emotion_strength', 'scene_mode', 'voice_consistency',
-  'background_music', 'status', 'audio_url', 'is_favorite', 'tags',
+  'background_music', 'background_music_enabled', 'background_music_volume',
+  'status', 'audio_url', 'is_favorite', 'tags',
 ]);
 
 // voiceCloneRoutes is now imported from routes/voiceClones.js (adds /public endpoint)
@@ -77,8 +84,13 @@ const conversationalVoiceRoutes = buildEntityRouter('conversational_voices', [
 ]);
 
 const brandStudioRoutes = buildEntityRouter('brand_studio_projects', [
-  'title', 'website_url', 'brand_voice_profile', 'vsl_script',
+  'title', 'website_url', 'brand_voice_profile', 'vsl_script', 'voice_prompt',
   'additional_scripts', 'audio_url', 'duration_seconds', 'status',
+]);
+
+const audiobookRoutes = buildEntityRouter('audiobooks', [
+  'title', 'original_file', 'file_url',
+  'voice_id', 'voice_name', 'voice_type', 'voice_url', 'language', 'status', 'audio_url',
 ]);
 
 // ── API Routes ────────────────────────────────────────────────────────────────
@@ -104,6 +116,9 @@ app.use('/api/ad-copies',         verifyToken, adCopyRoutes);
 app.use('/api/transcriptions',         verifyToken, transcriptionRoutes);
 app.use('/api/conversational-voices',  verifyToken, conversationalVoiceRoutes);
 app.use('/api/brand-studio-projects',  verifyToken, brandStudioRoutes);
+app.use('/api/notifications',          verifyToken, notificationRoutes);
+app.use('/api/system-voices',          verifyToken, systemVoicesRoutes);
+app.use('/api/audiobooks',             verifyToken, audiobookRoutes);
 
 // (Agency routes are now handled by /routes/agency.js)
 
@@ -123,11 +138,48 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
+// ── WebSocket Server ──────────────────────────────────────────────────────────
+const httpServer = createServer(app);
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+wss.on('connection', (ws, req) => {
+  // Authenticate via ?token=<jwt> in the upgrade URL
+  const url    = new URL(req.url, `http://localhost`);
+  const token  = url.searchParams.get('token');
+  let userId;
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    userId = payload.id || payload.userId || payload.sub;
+  } catch {
+    ws.close(4001, 'Unauthorized');
+    return;
+  }
+
+  registerConnection(userId, ws);
+
+  ws.on('close', () => removeConnection(userId, ws));
+  ws.on('error', () => removeConnection(userId, ws));
+
+  // Keep-alive ping
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+});
+
+// Ping all clients every 30 s to detect dead connections
+const pingInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) { ws.terminate(); return; }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30_000);
+wss.on('close', () => clearInterval(pingInterval));
+
 // ── Start Server ──────────────────────────────────────────────────────────────
 const start = async () => {
   await testConnection();
   initCronJobs();
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   });

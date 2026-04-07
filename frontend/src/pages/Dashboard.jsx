@@ -79,7 +79,10 @@ export default function Dashboard() {
     vsl: 10,
     ad: 15,
     custom: 2,
-    transcriptions: 10
+    transcriptions: 10,
+    brand_studio: 5,
+    conversational: 5,
+    audio_mix: 10,
   };
 
   // Get usage from monthly record or default to 0
@@ -89,7 +92,10 @@ export default function Dashboard() {
     vsl_used: 0,
     ad_used: 0,
     custom_used: 0,
-    transcriptions_used: 0
+    transcriptions_used: 0,
+    brand_studio_used: 0,
+    conversational_used: 0,
+    audio_mix_used: 0,
   };
 
   // Agency sub-users have a personal credit allocation instead of a plan-level limit
@@ -107,10 +113,13 @@ export default function Dashboard() {
   const usageCounts = {
     credits: { used: usage.credits_used, limit: currentUser?.credits_balance ?? limits.credits },
     clones: { used: usage.clones_used, limit: limits.clones },
+    brand_studio: { used: usage.brand_studio_used, limit: limits.brand_studio },
     vsl: { used: usage.vsl_used, limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
     adcopy: { used: usage.ad_used, limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
     customvoice: { used: usage.custom_used, limit: limits.custom },
     transcriptions: { used: usage.transcriptions_used, limit: hasAddonTranscriptions ? ADDON_LIMIT : limits.transcriptions },
+    conversational: { used: usage.conversational_used, limit: limits.conversational },
+    audio_mix: { used: usage.audio_mix_used, limit: limits.audio_mix },
   };
 
   // Combine recent projects

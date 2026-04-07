@@ -24,7 +24,16 @@ export default function BrandStudio() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.BrandStudioProject.create(data),
-    onSuccess: () => queryClient.invalidateQueries(['brandProjects']),
+    onSuccess: async () => {
+      queryClient.invalidateQueries(['brandProjects']);
+      try {
+        await base44.trackUsage('brand_studio', 1);
+      } catch (e) {
+        console.warn('Usage tracking failed:', e);
+      } finally {
+        queryClient.invalidateQueries({ queryKey: ['monthlyUsage'] });
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -58,11 +67,16 @@ export default function BrandStudio() {
       await sleep(600);
 
       // Build the project record
+      const profile = result.brand_voice_profile || {};
       const generatedData = {
         title: result.brand_name || extractBrandName(normalizedUrl),
         website_url: normalizedUrl,
-        brand_voice_profile: result.brand_voice_profile || {},
+        brand_voice_profile: {
+          ...profile,
+          vsl_sections: result.vsl_sections || {},
+        },
         vsl_script: result.vsl_script || '',
+        voice_prompt: profile.voice_prompt || '',
         additional_scripts: [],
         status: 'draft',
       };
@@ -93,6 +107,8 @@ export default function BrandStudio() {
     if (savedId) {
       await updateMutation.mutateAsync({ id: savedId, data: { status: 'pending' } });
     }
+
+
     setStage('rendering');
 
     // Wait for the overlay countdown (4s) then redirect
@@ -112,7 +128,7 @@ export default function BrandStudio() {
         )}
       </AnimatePresence>
 
-      <div className="max-w-3xl mx-auto pb-12">
+      <div className="max-w-5xl mx-auto pb-12">
         {stage === 'input' && (
           <UrlInputStep onSubmit={handleUrlSubmit} isLoading={isLoading} />
         )}

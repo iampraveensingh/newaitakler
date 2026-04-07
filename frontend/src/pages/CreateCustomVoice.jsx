@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -34,6 +34,11 @@ const categories = [
   { value: 'dramatic', label: '🎭 Dramatic' },
   { value: 'friendly', label: '🤗 Friendly' },
   { value: 'authoritative', label: '👔 Authoritative' },
+  { value: 'narrative', label: '📖 Narrative' },
+  { value: 'energetic', label: '⚡ Energetic' },
+  { value: 'soothing', label: '🧘 Soothing' },
+  { value: 'commercial', label: '📢 Commercial' },
+  { value: 'educational', label: '🎓 Educational' },
 ];
 
 const testScripts = [
@@ -64,10 +69,7 @@ export default function CreateCustomVoice() {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['customVoices'] });
       try {
-        await Promise.all([
-          base44.trackUsage('custom', 1),
-          base44.trackUsage('credits', 1),
-        ]);
+        await base44.trackUsage('custom', 1);
       } catch (e) {
         console.warn('Usage tracking failed:', e);
       } finally {

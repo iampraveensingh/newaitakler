@@ -135,17 +135,35 @@ Analyze the provided website content and return a JSON object with EXACTLY these
 {
   "brand_name": string,
   "brand_voice_profile": {
+    "website_type": string,
+    "emotion": string,
     "tone": string,
     "style": string,
     "personality": string,
     "target_audience": string,
     "tagline": string,
+    "content_summary": string,
+    "speaker_style": string,
+    "voice_prompt": string,
     "key_messages": [string, string, string]
+  },
+  "vsl_sections": {
+    "hook": string,
+    "body": string,
+    "cta": string
   },
   "vsl_script": string
 }
-The vsl_script must be a complete, high-converting Video Sales Letter — hook, story, offer, CTA.
-Write it in a natural, conversational tone optimized for voice delivery. Minimum 300 words.
+website_type: classify the site (e.g. "Digital Product / SaaS", "E-Commerce", "Service Business", "Blog / Media", "Agency", "Personal Brand").
+emotion: the primary emotional tone conveyed (e.g. "Excited", "Trustworthy", "Inspiring", "Urgent", "Calm").
+tone: describe the writing/voice tone (e.g. "Bold", "Professional", "Friendly", "Authoritative").
+content_summary: 2–3 sentence plain-English summary of what the brand does, who it serves, and its key value proposition.
+speaker_style: a short label describing the ideal voice narrator (e.g. "Confident, energetic male narrator with authoritative warmth").
+voice_prompt: a detailed 2–3 sentence voice direction describing pace, energy, pauses, delivery style, and emotional feel — as if briefing a voice actor.
+vsl_sections.hook: the opening hook paragraph of the VSL (1–2 sentences that grab attention).
+vsl_sections.body: the middle story/proof section (several sentences building desire).
+vsl_sections.cta: the closing call-to-action paragraph.
+vsl_script: the complete VSL combining all sections — a high-converting Video Sales Letter with hook, story, offer, and CTA. Minimum 300 words, conversational tone optimized for voice delivery.
 Return ONLY valid JSON. No markdown. No extra text.`;
 
   const userPrompt = scrapedContent
@@ -217,18 +235,28 @@ function buildMockBrandData(title, url) {
   return {
     brand_name: brand,
     brand_voice_profile: {
+      website_type: 'Business / Service',
+      emotion: 'Trustworthy',
       tone: 'Professional & Engaging',
       style: 'Conversational',
       personality: 'Authoritative, Trustworthy',
       target_audience: 'Business professionals and entrepreneurs',
       tagline: 'Empowering your success',
+      content_summary: `${brand} is a professional platform dedicated to helping businesses and entrepreneurs achieve their goals. It offers proven solutions designed to streamline operations and drive measurable results. The brand targets ambitious professionals looking for reliable, expert-backed support.`,
+      speaker_style: 'Confident, professional narrator with warm authority',
+      voice_prompt: `Deliver this script with steady confidence and a calm sense of authority. Keep a measured pace — pause briefly after key statements to let them land. The tone should feel like a trusted advisor speaking directly to the listener, not a salesperson. Warm but purposeful throughout.`,
       key_messages: [
         'Quality solutions tailored to your needs',
         'Proven results you can rely on',
         'Expert support every step of the way',
       ],
     },
-    vsl_script: `Are you tired of struggling with the same challenges in your business?\n\nIntroducing ${brand} — a proven solution that changes everything.\n\nWe've helped thousands of entrepreneurs and business owners transform their results with cutting-edge tools and strategies.\n\nHere's what makes us different: We don't just give you tools — we give you a complete system designed for real results.\n\nOur clients consistently see measurable improvements within the first 30 days.\n\nDon't let another day pass without taking action. Click the button below and start your transformation today.\n\nYour success story begins now.`,
+    vsl_sections: {
+      hook: `Are you tired of struggling with the same challenges in your business? What if there was a proven way to change your results — starting today?`,
+      body: `Introducing ${brand} — a complete solution built for entrepreneurs who are serious about growth. We've helped thousands of business owners streamline their operations and achieve measurable results within the first 30 days. Our system doesn't just give you tools — it gives you the clarity, strategy, and support you need to win.`,
+      cta: `Don't let another day pass without taking action. Click the button below, and let's start building your success story together. Your transformation begins now.`,
+    },
+    vsl_script: `Are you tired of struggling with the same challenges in your business? What if there was a proven way to change your results — starting today?\n\nIntroducing ${brand} — a complete solution built for entrepreneurs who are serious about growth.\n\nWe've helped thousands of business owners streamline their operations and achieve measurable results within the first 30 days. Our system doesn't just give you tools — it gives you the clarity, strategy, and support you need to win.\n\nHere's what makes us different: We don't just promise results — we deliver a complete system designed around your specific goals.\n\nOur clients consistently see significant improvements within the first month. And with the right tools in place, those results keep compounding.\n\nDon't let another day pass without taking action. Click the button below, and let's start building your success story together. Your transformation begins now.`,
   };
 }
 

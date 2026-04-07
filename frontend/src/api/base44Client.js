@@ -141,6 +141,7 @@ export const entities = {
   Transcription:          createEntityApi('transcriptions'),
   ConversationalVoice:    createEntityApi('conversational-voices'),
   BrandStudioProject:     createEntityApi('brand-studio-projects'),
+  Audiobook:              createEntityApi('audiobooks'),
   DFYOffer:          createEntityApi('dfy-offers'),
   PlanLimits:        createEntityApi('plan-limits'),
   UserUsageMonthly:     createEntityApi('usage-monthly'),
@@ -149,7 +150,7 @@ export const entities = {
 };
 
 // ─── USAGE TRACKING ──────────────────────────────────────────────────────────
-// feature: 'credits' | 'clones' | 'vsl' | 'ad' | 'custom' | 'transcriptions'
+// feature: 'credits' | 'clones' | 'vsl' | 'ad' | 'custom' | 'transcriptions' | 'brand_studio' | 'conversational' | 'audio_mix'
 export const trackUsage = async (feature, amount = 1) => {
   const { data } = await apiClient.post('/usage-monthly/track', { feature, amount });
   return data.data;
@@ -203,6 +204,59 @@ export const agency = {
   },
 };
 
+// ─── SYSTEM VOICES ───────────────────────────────────────────────────────────
+
+export const systemVoices = {
+  list: async () => {
+    const { data } = await apiClient.get('/system-voices');
+    return data.data;
+  },
+
+  listAll: async () => {
+    const { data } = await apiClient.get('/system-voices/all');
+    return data.data;
+  },
+
+  create: async (payload) => {
+    const { data } = await apiClient.post('/system-voices', payload);
+    return data.data;
+  },
+
+  update: async (id, payload) => {
+    const { data } = await apiClient.put(`/system-voices/${id}`, payload);
+    return data.data;
+  },
+
+  delete: async (id) => {
+    const { data } = await apiClient.delete(`/system-voices/${id}`);
+    return data.data;
+  },
+};
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+
+export const notifications = {
+  list: async () => {
+    const { data } = await apiClient.get('/notifications');
+    return data.data; // { notifications, unreadCount }
+  },
+
+  markRead: async (id) => {
+    const { data } = await apiClient.put(`/notifications/${id}/read`);
+    return data.data;
+  },
+
+  markAllRead: async () => {
+    const { data } = await apiClient.put('/notifications/read-all');
+    return data.data;
+  },
+
+  delete: async (id) => {
+    const { data } = await apiClient.delete(`/notifications/${id}`);
+    return data.data;
+  },
+};
+
 // ─── AI INTEGRATIONS ─────────────────────────────────────────────────────────
 
 export const integrations = {
@@ -250,6 +304,8 @@ export const base44 = {
   entities,
   uploads,
   agency,
+  notifications,
+  systemVoices,
   trackUsage,
   integrations,
   functions: {

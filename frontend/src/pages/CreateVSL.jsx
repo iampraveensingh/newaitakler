@@ -125,10 +125,7 @@ export default function CreateVSL() {
       queryClient.invalidateQueries({ queryKey: ['vslCopies'] });
       if (!editId) {
         try {
-          await Promise.all([
-            base44.trackUsage('vsl', 1),
-            base44.trackUsage('credits', 1),
-          ]);
+          await base44.trackUsage('vsl', 1);
         } catch (e) {
           console.warn('Usage tracking failed:', e);
         } finally {
@@ -140,6 +137,23 @@ export default function CreateVSL() {
   });
 
   const generateVSL = async () => {
+    if (!formData.product_name.trim()) {
+      toast.error('Product name is required.');
+      return;
+    }
+    if (formData.product_name.trim().length < 2) {
+      toast.error('Product name must be at least 2 characters.');
+      return;
+    }
+    if (!formData.sales_page_url.trim()) {
+      toast.error('Sales page URL is required.');
+      return;
+    }
+    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w]{2,}(\/\S*)?$/i;
+    if (!urlPattern.test(formData.sales_page_url.trim())) {
+      toast.error('Please enter a valid sales page URL (e.g. https://example.com).');
+      return;
+    }
     if (!editId && !vslLimit.allowed) return;
     setShowOverlay(true);
     setIsGenerating(true);

@@ -1,85 +1,144 @@
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Sparkles, Globe, Pen, Loader2 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { cn } from '@/lib/utils';
 
-export default function AddScriptDialog({ open, onClose, onAdd }) {
-  const [title, setTitle] = useState('');
-  const [script, setScript] = useState('');
+const SCRIPT_MODES = [
+  { id: 'write',     label: 'Write Manually',  icon: Pen,      desc: 'Type or paste your script' },
+  { id: 'ai',        label: 'Generate with AI', icon: Sparkles, desc: 'AI writes a script from a prompt' },
+  { id: 'salespage', label: 'From Sales Page',  icon: Globe,    desc: 'AI extracts a script from your URL' },
+];
 
-  const handleAdd = () => {
-    if (!script.trim()) return;
-    onAdd({ title: title.trim() || 'Untitled Script', script: script.trim() });
-    setTitle('');
-    setScript('');
-    onClose();
+export default function AddScriptDialog({ open, onClose, onAdd, projectUrl, brandVoicePrompt }) {
+  const [mode, setMode]             = useState('write');
+  const [title, setTitle]           = useState('');
+  const [script, setScript]         = useState('');
+  const [aiPrompt, setAiPrompt]     = useState('');
+  const [pageUrl, setPageUrl]       = useState(projectUrl || '');
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      let prompt = '';
+      if (mode === 'ai') {
+        prompt = `You are a professional copywriter. Write a compelling voiceover script based on this request: "${aiPrompt}".\n${brandVoicePrompt ? `Use this brand voice style: ${brandVoicePrompt}` : ''}\nWrite only the script text, no stage directions or labels.`;
+      } else if (mode === 'salespage') {
+        prompt = `Visit and analyze this sales page URL: ${pageUrl}.\nWrite a compelling voiceover script that captures the key selling points, benefits, and call-to-action from this page.\n${brandVoicePrompt ? `Use this brand voice style: ${brandVoicePrompt}` : ''}\nWrite only the script text, no stage directions or labels.`;
+      }
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            title:  { type: 'string', description: 'A short title for the script (3-6 words)' },
+            script: { type: 'string', description: 'The full voiceover script text' },
+          },
+        },
+        add_context_from_internet: mode === 'salespage',
+      });
+      setTitle(result.title || 'AI Generated Script');
+      setScript(result.script || '');
+      setMode('write');
+    } catch {
+      // silently fail
+    } finally {
+      setGenerating(false);
+    }
   };
 
+  const handleAdd = () => {
+    if (!title.trim() || !script.trim()) return;
+    onAdd(title.trim(), script.trim());
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setScript('');
+    setAiPrompt('');
+    setPageUrl(projectUrl || '');
+    setMode('write');
+  };
+
+  const handleClose = () => { resetForm(); onClose(); };
+
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
-          onClick={e => e.target === e.currentTarget && onClose()}
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="w-full max-w-lg bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl"
-          >
-            <div className="flex items-center justify-between p-5 border-b border-slate-700/50">
-              <h3 className="font-semibold text-white">Add Script Variation</h3>
-              <Button size="icon" variant="ghost" onClick={onClose} className="text-slate-400 hover:text-white w-8 h-8">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-white">Add New Script</DialogTitle>
+        </DialogHeader>
 
-            <div className="p-5 space-y-4">
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {SCRIPT_MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={cn(
+                'flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all',
+                mode === m.id
+                  ? 'border-violet-500 bg-violet-500/10 text-violet-300'
+                  : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+              )}
+            >
+              <m.icon className="w-5 h-5" />
+              <span className="text-xs font-medium">{m.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3 py-1">
+          {mode === 'write' && (
+            <>
               <div>
-                <Label className="text-slate-400 text-xs mb-1.5 block">Script Title</Label>
-                <Input
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="e.g. Short Version, Facebook Ad..."
-                  className="bg-slate-800/60 border-slate-700 text-white"
-                />
+                <label className="text-xs text-slate-400 block mb-1">Script Title</label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Follow-up Ad, Landing Page Script..." className="bg-slate-800/50 border-slate-700" />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1.5 block">Script Content</Label>
-                <Textarea
-                  value={script}
-                  onChange={e => setScript(e.target.value)}
-                  placeholder="Enter your script here..."
-                  rows={8}
-                  className="bg-slate-800/60 border-slate-700 text-white text-sm resize-none"
-                />
+                <label className="text-xs text-slate-400 block mb-1">Script Content</label>
+                <Textarea value={script} onChange={(e) => setScript(e.target.value)} placeholder="Write or paste your script here..." rows={7} className="bg-slate-800/50 border-slate-700 resize-none" />
               </div>
-            </div>
+            </>
+          )}
 
-            <div className="flex gap-3 p-5 pt-0">
-              <Button variant="outline" onClick={onClose}
-                className="flex-1 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAdd}
-                disabled={!script.trim()}
-                className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 disabled:opacity-50"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Add Script
+          {mode === 'ai' && (
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Describe what the script should be about</label>
+              <Textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="e.g. A 60-second ad for a fitness app targeting busy professionals..." rows={4} className="bg-slate-800/50 border-slate-700 resize-none" />
+              <Button onClick={handleGenerate} disabled={!aiPrompt.trim() || generating} className="w-full mt-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 gap-2">
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generating ? 'Generating...' : 'Generate Script'}
               </Button>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          )}
+
+          {mode === 'salespage' && (
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Sales Page URL</label>
+              <Input value={pageUrl} onChange={(e) => setPageUrl(e.target.value)} placeholder="https://yourproduct.com/sales" className="bg-slate-800/50 border-slate-700" />
+              <p className="text-[10px] text-slate-500 mt-1">AI will analyze this page and generate a voiceover script</p>
+              <Button onClick={handleGenerate} disabled={!pageUrl.trim() || generating} className="w-full mt-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 gap-2">
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                {generating ? 'Analyzing Page...' : 'Generate from Page'}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {mode === 'write' && (
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={!title.trim() || !script.trim()} className="bg-gradient-to-r from-violet-600 to-pink-600 gap-1">
+              <Plus className="w-4 h-4" /> Add Script
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

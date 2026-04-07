@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, AudioLines, Sparkles, CheckCircle, Mic } from 'lucide-react';
+import { Users, Save, Clock, CheckCircle } from 'lucide-react';
 
 const stages = [
-  { text: 'Preparing speakers...', icon: Users },
-  { text: 'Generating voice tracks...', icon: Mic },
-  { text: 'Syncing conversation...', icon: AudioLines },
-  { text: 'Polishing audio...', icon: Sparkles },
-  { text: 'Complete!', icon: CheckCircle },
+  { text: 'Saving your conversation...', icon: Save },
+  { text: 'Applying speaker settings...', icon: Users },
+  { text: 'Queuing for generation...', icon: Clock },
+  { text: 'Saved! Audio will be ready shortly.', icon: CheckCircle },
 ];
 
 export default function GenerateConversationOverlay({ isVisible, onComplete }) {

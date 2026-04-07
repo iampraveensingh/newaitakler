@@ -48,6 +48,8 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AdCopyList from './pages/AdCopyList';
+import AudiobookCreator from './pages/AudiobookCreator';
+import AudiobookList from './pages/AudiobookList';
 import BrandStudio from './pages/BrandStudio';
 import BrandStudioEdit from './pages/BrandStudioEdit';
 import BrandStudioList from './pages/BrandStudioList';
@@ -73,12 +75,15 @@ import Transcribe from './pages/Transcribe';
 import VSLList from './pages/VSLList';
 import VideoTutorials from './pages/VideoTutorials';
 import ViralPro from './pages/ViralPro';
+import VoiceAdmin from './pages/VoiceAdmin';
 import VoiceoverList from './pages/VoiceoverList';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AdCopyList": AdCopyList,
+    "AudiobookCreator": AudiobookCreator,
+    "AudiobookList": AudiobookList,
     "Agency": Agency,
     "AudioMixer": AudioMixer,
     "Billing": Billing,
@@ -104,6 +109,7 @@ export const PAGES = {
     "VSLList": VSLList,
     "VideoTutorials": VideoTutorials,
     "ViralPro": ViralPro,
+    "VoiceAdmin": VoiceAdmin,
     "VoiceoverList": VoiceoverList,
 }
 

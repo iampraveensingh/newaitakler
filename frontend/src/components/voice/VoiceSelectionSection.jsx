@@ -1,41 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { base44, systemVoices as systemVoicesApi } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import VoiceCard from './VoiceCard';
 import IconTabs from '@/components/ui/IconTabs';
-import { Mic, Heart, Briefcase, Drama, Copy, Sparkles, Loader2, Clock } from 'lucide-react';
-
-const stockVoicesData = [
-  { id: 'sarah', name: 'Sarah', type: 'emotional', description: 'Warm & friendly', audio: 'https://staging.prowebventures.com/music/sarah.wav' },
-  { id: 'emma', name: 'Emma', type: 'emotional', description: 'Calm & soothing', audio: 'https://staging.prowebventures.com/music/emma.wav' },
-  { id: 'nicole', name: 'Nicole', type: 'emotional', description: 'Deep', audio: 'https://staging.prowebventures.com/music/Nicole.wav' },
-  { id: 'olivia', name: 'Olivia', type: 'emotional', description: 'Empathetic tone', audio: 'https://staging.prowebventures.com/music/Olivia.wav' },
-  { id: 'mia', name: 'Mia', type: 'emotional', description: 'Gentle & caring', audio: 'https://staging.prowebventures.com/music/Mia.wav' },
-  { id: 'alex', name: 'Alex', type: 'professional', description: 'Clear & confident', audio: 'https://staging.prowebventures.com/music/Alex.wav' },
-  { id: 'michael', name: 'Michael (PM)', type: 'professional', description: 'Deep & authoritative', audio: 'https://staging.prowebventures.com/music/Michael.wav' },
-  { id: 'david', name: 'David', type: 'professional', description: 'Energetic presenter', audio: 'https://staging.prowebventures.com/music/David.wav' },
-  { id: 'james', name: 'James', type: 'professional', description: 'News anchor style', audio: 'https://staging.prowebventures.com/music/James.wav' },
-  { id: 'robert', name: 'Robert', type: 'professional', description: 'Corporate tone', audio: 'https://staging.prowebventures.com/music/emma.wav' },
-  { id: 'aria', name: 'Aria', type: 'expressive', description: 'Dynamic range', audio: 'https://staging.prowebventures.com/music/Aria.wav' },
-  { id: 'felix', name: 'Felix', type: 'expressive', description: 'Dramatic flair', audio: 'https://staging.prowebventures.com/music/Felix.wav' },
-  { id: 'ivy', name: 'Ivy', type: 'expressive', description: 'Storyteller', audio: 'https://staging.prowebventures.com/music/Ivy.wav' },
-  { id: 'max', name: 'Max', type: 'expressive', description: 'Animated & fun', audio: 'https://staging.prowebventures.com/music/Max.wav' },
-  { id: 'zoe', name: 'Zoe', type: 'expressive', description: 'Versatile artist', audio: 'https://staging.prowebventures.com/music/Zoe.wav' },
-];
+import { Mic, MessageSquare, BookOpen, Theater, Share2, GraduationCap, Megaphone, Star, Copy, Sparkles, Loader2, Clock } from 'lucide-react';
 
 const voiceCategories = [
-  { value: 'recent', label: 'Recent', icon: Clock },
-  { value: 'all', label: 'All Voices', icon: Mic },
-  { value: 'emotional', label: 'Emotional', icon: Heart },
-  { value: 'professional', label: 'Professional', icon: Briefcase },
-  { value: 'expressive', label: 'Expressive', icon: Drama },
-  { value: 'cloned', label: 'My Clones', icon: Copy },
-  { value: 'custom', label: 'Custom', icon: Sparkles },
+  { value: 'recent',        label: 'Recent',        icon: Clock          },
+  { value: 'all',           label: 'All Voices',    icon: Mic            },
+  { value: 'conversational',label: 'Conversational',icon: MessageSquare  },
+  { value: 'narration',     label: 'Narration',     icon: BookOpen       },
+  { value: 'characters',    label: 'Characters',    icon: Theater        },
+  { value: 'social_media',  label: 'Social Media',  icon: Share2         },
+  { value: 'educational',   label: 'Educational',   icon: GraduationCap  },
+  { value: 'advertisement', label: 'Advertisement', icon: Megaphone      },
+  { value: 'entertainment', label: 'Entertainment', icon: Star           },
+  { value: 'cloned',        label: 'My Clones',     icon: Copy           },
+  { value: 'custom',        label: 'Custom',        icon: Sparkles       },
 ];
 
 export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, initialTab }) {
   const [activeTab, setActiveTab] = useState(initialTab || 'all');
+
+  // Fetch system voices from DB
+  const { data: rawSystemVoices = [], isLoading: loadingSystem } = useQuery({
+    queryKey: ['systemVoices'],
+    queryFn: systemVoicesApi.list,
+    staleTime: 5 * 60_000,
+  });
+  const stockVoicesData = rawSystemVoices.map(v => ({
+    id: `system_${v.id}`,
+    name: v.name,
+    type: v.type,
+    description: v.description || '',
+    audio: v.audio_url || '',
+  }));
 
   // Fetch user's own cloned voices
   const { data: ownClones = [], isLoading: loadingClones } = useQuery({
@@ -100,7 +100,9 @@ export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, 
 
   const currentCategory = voiceCategories.find(c => c.value === activeTab);
   const voices = getVoicesForCategory(activeTab);
-  const isLoading = (activeTab === 'cloned' && loadingClones) || (activeTab === 'custom' && loadingCustom);
+  const isLoading = loadingSystem ||
+    (activeTab === 'cloned' && loadingClones) ||
+    (activeTab === 'custom' && loadingCustom);
 
   // Get recently used voices from localStorage
   const [recentVoices, setRecentVoices] = useState([]);

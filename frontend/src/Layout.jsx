@@ -3,14 +3,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Mic, Copy, Music2, FileText, Video, Users, Gift,
-  Sparkles, HelpCircle, LogOut, Menu, X, ChevronDown, Volume2,
-  AudioLines, PenTool, FileAudio, Headphones, Loader2
+  LayoutDashboard, Mic, Music2, Video, Users,
+  Sparkles, HelpCircle, LogOut, Menu, X, ChevronDown,
+  PenTool, Loader2, BookOpen,
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { useNotificationSocket } from '@/lib/useNotificationSocket';
 
 // ─── Nav data ────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,15 @@ const navItems = [
       { name: 'My Clones',           page: 'CloneList',          emoji: '👯' },
       { name: 'Create Custom Voice', page: 'CreateCustomVoice',  emoji: '✨' },
       { name: 'My Custom Voices',    page: 'CustomVoiceList',    emoji: '🎧' },
+    ],
+  },
+  {
+    name: 'Brand Studio',
+    icon: Sparkles,
+    emoji: '🎨',
+    children: [
+      { name: 'New Brand Project', page: 'BrandStudio',     emoji: '✨' },
+      { name: 'Brand Projects',    page: 'BrandStudioList', emoji: '🗂️' },
     ],
   },
   {
@@ -52,12 +63,12 @@ const navItems = [
     ],
   },
   {
-    name: 'Brand Studio',
-    icon: Sparkles,
-    emoji: '🎨',
+    name: 'Audiobook',
+    icon: BookOpen,
+    emoji: '📖',
     children: [
-      { name: 'New Brand Project', page: 'BrandStudio',     emoji: '✨' },
-      { name: 'Brand Projects',    page: 'BrandStudioList', emoji: '🗂️' },
+      { name: 'Create Audiobook', page: 'AudiobookCreator', emoji: '📝' },
+      { name: 'My Audiobooks',    page: 'AudiobookList',    emoji: '📚' },
     ],
   },
   { name: 'Transcribe', icon: Video,          page: 'Transcribe', emoji: '🎥' },
@@ -194,20 +205,12 @@ function Sidebar({ mobile = false }) {
   return (
     <div className={`flex flex-col h-full bg-slate-900/95 backdrop-blur-xl ${mobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} transition-all duration-300`}>
       {/* Logo */}
-      <div className="p-6 border-b border-slate-800/50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-            <AudioLines className="w-6 h-6 text-white" />
-          </div>
-          {(sidebarOpen || mobile) && (
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Expressive Voice
-              </h1>
-              <p className="text-xs text-slate-400">Creator Studio</p>
-            </div>
-          )}
-        </div>
+      <div className="px-4 py-5 border-b border-slate-800/50 flex items-center justify-center">
+        <img
+          src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+          alt="AI Talker"
+          className={`object-contain transition-all duration-300 ${sidebarOpen || mobile ? 'h-10 w-auto' : 'h-8 w-8'}`}
+        />
       </div>
 
       {/* Navigation — overflow-y-auto keeps scroll inside the sidebar */}
@@ -242,6 +245,10 @@ export default function Layout({ children, currentPageName }) {
 
   const location = useLocation();
   const { user }  = useAuth();
+
+  // Single WebSocket connection for the entire app — must not be inside NotificationCenter
+  // because that component is mounted twice (mobile + desktop) which would open two sockets.
+  useNotificationSocket();
 
   const addonsObj = (user?.addons && typeof user.addons === 'object' && !Array.isArray(user.addons)) ? user.addons : {};
   const hasAgency = addonsObj?.AGENCY === true || addonsObj?.agency === true;
@@ -316,17 +323,19 @@ export default function Layout({ children, currentPageName }) {
         {/* Mobile Header */}
         <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/50 px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <AudioLines className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                Expressive Voice
-              </span>
+            <div className="flex items-center">
+              <img
+                src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+                alt="AI Talker"
+                className="h-9 w-auto object-contain"
+              />
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setMobileOpen(o => !o)}>
-              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              <NotificationCenter />
+              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(o => !o)}>
+                {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -369,6 +378,10 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Main Content */}
           <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'ml-72' : 'ml-20'}`}>
+            {/* Desktop top bar */}
+            <div className="sticky top-0 z-30 flex justify-end items-center px-8 py-3 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/40">
+              <NotificationCenter />
+            </div>
             <div className="p-6 lg:p-8">{children}</div>
           </main>
         </div>

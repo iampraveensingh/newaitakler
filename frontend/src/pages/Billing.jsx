@@ -2,10 +2,10 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { 
+import {
   CreditCard, Crown, Zap, Check, Star, Sparkles,
   Mic, Copy, FileText, PenTool, Video, TrendingUp,
-  Infinity, Users, Rocket, Shield, ArrowRight
+  Infinity, Users, Rocket, Shield, ArrowRight, Layers, MessageSquare, Music2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 const addonDefinitions = {
   unlimited: {
     key: 'unlimited',
+    apiKeys: ['unlimited', 'UNLIMITED'],
     name: 'Unlimited Edition',
     description: 'Remove all limits on voiceovers and credits',
     icon: Infinity,
@@ -32,6 +33,7 @@ const addonDefinitions = {
   },
   vsl_edition: {
     key: 'vsl_edition',
+    apiKeys: ['vsl', 'VSL', 'vsl_edition'],
     name: 'VSL Edition',
     description: 'Unlock advanced VSL script generation',
     icon: FileText,
@@ -47,6 +49,7 @@ const addonDefinitions = {
   },
   adcopy_edition: {
     key: 'adcopy_edition',
+    apiKeys: ['adcopy', 'ADCOPY', 'ad_copy', 'adcopy_edition'],
     name: 'Ad Copy Edition',
     description: 'Create unlimited ad copies for all platforms',
     icon: PenTool,
@@ -62,6 +65,7 @@ const addonDefinitions = {
   },
   transcriber_edition: {
     key: 'transcriber_edition',
+    apiKeys: ['transcribe', 'TRANSCRIBE', 'transcriber', 'transcriber_edition'],
     name: 'Transcriber Edition',
     description: 'Transcribe unlimited videos and audio files',
     icon: Video,
@@ -77,6 +81,7 @@ const addonDefinitions = {
   },
   agency: {
     key: 'agency',
+    apiKeys: ['agency', 'AGENCY'],
     name: 'Agency License',
     description: 'White-label & team collaboration features',
     icon: Users,
@@ -95,10 +100,13 @@ const addonDefinitions = {
 const usageIcons = {
   credits: Zap,
   clones: Copy,
+  brand_studio: Layers,
   vsl: FileText,
   ad: PenTool,
   custom: Sparkles,
-  transcriptions: Video
+  transcriptions: Video,
+  conversational: MessageSquare,
+  audio_mix: Music2,
 };
 
 export default function Billing() {
@@ -129,12 +137,15 @@ export default function Billing() {
   const usage = monthlyUsage?.[0] || {};
 
   const usageData = [
-    { key: 'credits', label: 'Voiceover Credits', used: usage.credits_used || 0, limit: limits.credits || 0 },
-    { key: 'clones', label: 'Voice Clones', used: usage.clones_used || 0, limit: limits.clones || 0 },
-    { key: 'vsl', label: 'VSL Scripts', used: usage.vsl_used || 0, limit: limits.vsl || 0 },
-    { key: 'ad', label: 'Ad Copies', used: usage.ad_used || 0, limit: limits.ad || 0 },
-    { key: 'custom', label: 'Custom Voices', used: usage.custom_used || 0, limit: limits.custom || 0 },
-    { key: 'transcriptions', label: 'Transcriptions', used: usage.transcriptions_used || 0, limit: limits.transcriptions || 0 },
+    { key: 'credits',        label: 'Voiceover Credits', used: usage.credits_used        || 0, limit: limits.credits        || 0 },
+    { key: 'clones',         label: 'Voice Clones',      used: usage.clones_used         || 0, limit: limits.clones          || 0 },
+    { key: 'brand_studio',   label: 'Brand Studio',      used: usage.brand_studio_used   || 0, limit: limits.brand_studio    || 0 },
+    { key: 'vsl',            label: 'VSL Scripts',       used: usage.vsl_used            || 0, limit: limits.vsl             || 0 },
+    { key: 'ad',             label: 'Ad Copies',         used: usage.ad_used             || 0, limit: limits.ad              || 0 },
+    { key: 'custom',         label: 'Custom Voices',     used: usage.custom_used         || 0, limit: limits.custom          || 0 },
+    { key: 'transcriptions', label: 'Transcriptions',    used: usage.transcriptions_used || 0, limit: limits.transcriptions  || 0 },
+    { key: 'conversational', label: 'Conversational',    used: usage.conversational_used || 0, limit: limits.conversational  || 0 },
+    { key: 'audio_mix',      label: 'Audio Mixes',       used: usage.audio_mix_used      || 0, limit: limits.audio_mix       || 0 },
   ];
 
   const activeAddons = Object.entries(addons).filter(([_, active]) => active).map(([key]) => key);
@@ -200,7 +211,7 @@ export default function Billing() {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {usageData.map((item, idx) => {
             const Icon = usageIcons[item.key];
             const percentage = item.limit > 0 ? Math.min((item.used / item.limit) * 100, 100) : 0;
@@ -286,12 +297,14 @@ export default function Billing() {
                     'Unlimited voiceover credits',
                     'Unlimited voice generations',
                     'Unlimited voice clones',
+                    'Unlimited Brand Studio projects',
                     'Unlimited VSL scripts',
                     'Unlimited ad copies',
                     'Unlimited transcriptions',
+                    'Unlimited conversational voices',
+                    'Unlimited audio mixes',
                     'Priority processing',
                     'No monthly resets',
-                    'Premium support',
                     'All future updates'
                   ].map((feature, idx) => (
                     <motion.div
@@ -348,7 +361,7 @@ export default function Billing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {Object.values(addonDefinitions).filter(a => a.key !== 'unlimited').map((addon, idx) => {
             const Icon = addon.icon;
-            const isActive = addons[addon.key];
+            const isActive = addon.apiKeys.some(k => addons[k] === true);
 
             return (
               <motion.div

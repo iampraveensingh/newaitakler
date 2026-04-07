@@ -75,10 +75,7 @@ export default function Transcribe() {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['transcriptions'] });
       try {
-        await Promise.all([
-          base44.trackUsage('transcriptions', 1),
-          base44.trackUsage('credits', 1),
-        ]);
+        await base44.trackUsage('transcriptions', 1);
       } catch (e) {
         console.warn('Usage tracking failed:', e);
       } finally {
@@ -99,14 +96,33 @@ export default function Transcribe() {
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setFormData(prev => ({ ...prev, source_url: file_url }));
-      toast.success('File uploaded!');
+    if (!file) return;
+    const MAX_SIZE_MB = 100;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      toast.error(`File size exceeds ${MAX_SIZE_MB}MB limit. Please choose a smaller file.`);
+      return;
     }
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setFormData(prev => ({ ...prev, source_url: file_url }));
+    toast.success('File uploaded!');
   };
 
   const startTranscription = async () => {
+    if (!formData.title.trim()) {
+      toast.error('Please enter a title for this transcription.');
+      return;
+    }
+    if (!formData.source_url) {
+      toast.error(sourceType === 'youtube' ? 'Please enter a YouTube URL.' : 'Please upload a file first.');
+      return;
+    }
+    if (sourceType === 'youtube') {
+      const ytPattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}/i;
+      if (!ytPattern.test(formData.source_url.trim())) {
+        toast.error('Please enter a valid YouTube URL.');
+        return;
+      }
+    }
     if (!transLimit.allowed) return;
     setIsProcessing(true);
     await createMutation.mutateAsync({

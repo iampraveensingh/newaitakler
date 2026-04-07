@@ -40,10 +40,10 @@ function analyzeScript(script) {
     }
 
     if (!speakers.has(speakerLabel)) {
-      speakers.set(speakerLabel, { label: speakerLabel, voice_id: '', voice_name: '', voice_type: '' });
+      speakers.set(speakerLabel, { label: speakerLabel, voice_id: '', voice_name: '', voice_type: '', voice_url: '' });
     }
 
-    return { text, speaker_label: speakerLabel, voice_id: '', voice_name: '', voice_type: '' };
+    return { text, speaker_label: speakerLabel, voice_id: '', voice_name: '', voice_type: '', voice_url: '' };
   });
 
   return { segments, speakers: Array.from(speakers.values()) };
@@ -76,9 +76,16 @@ export default function CreateConversational() {
     if (existingConv) {
       setTitle(existingConv.title || '');
       setScript(existingConv.full_script || '');
-      if (existingConv.segments?.length) {
-        setSegments(existingConv.segments);
-        setSpeakers(existingConv.speakers || []);
+      // speakers is stored as [{ name, voice_url }] — map back to UI shape
+      const savedSpeakers = existingConv.speakers || [];
+      if (savedSpeakers.length) {
+        setSpeakers(savedSpeakers.map(s => ({
+          label:      s.name       || '',
+          voice_id:   '',
+          voice_name: '',
+          voice_type: '',
+          voice_url:  s.voice_url  || '',
+        })));
         setIsAnalyzed(true);
       }
     }
@@ -89,13 +96,38 @@ export default function CreateConversational() {
       if (editId) return base44.entities.ConversationalVoice.update(editId, data);
       return base44.entities.ConversationalVoice.create(data);
     },
-    onSuccess: () => queryClient.invalidateQueries(['conversationalVoices'])
+    onSuccess: async (_, variables) => {
+      queryClient.invalidateQueries(['conversationalVoices']);
+      // Only track usage when generating (status: pending), not when saving as draft
+      if (variables?.status === 'pending' && !editId) {
+        try {
+          await base44.trackUsage('conversational', 1);
+        } catch (e) {
+          console.warn('Usage tracking failed:', e);
+        } finally {
+          queryClient.invalidateQueries({ queryKey: ['monthlyUsage'] });
+        }
+      }
+    },
   });
 
   const handleAnalyze = async () => {
+    if (!script.trim()) {
+      toast.error('Please enter a script before analyzing.');
+      return;
+    }
+    if (script.trim().split(/\s+/).length < 5) {
+      toast.error('Script is too short. Please enter a longer conversation.');
+      return;
+    }
     setIsAnalyzing(true);
     await new Promise(r => setTimeout(r, 1200));
     const result = analyzeScript(script);
+    if (result.speakers.length > 5) {
+      setIsAnalyzing(false);
+      toast.error(`Too many speakers detected (${result.speakers.length}). Maximum allowed is 5.`);
+      return;
+    }
     setSegments(result.segments);
     setSpeakers(result.speakers);
     setIsAnalyzing(false);
@@ -106,18 +138,35 @@ export default function CreateConversational() {
   const allVoicesAssigned = speakers.length > 0 && speakers.every(s => s.voice_id);
 
   const handleGenerate = async () => {
+    if (!script.trim()) {
+      toast.error('Script cannot be empty.');
+      return;
+    }
+    if (!allVoicesAssigned) {
+      toast.error('Please assign a voice to every speaker before generating.');
+      return;
+    }
     setShowGenerating(true);
+
+    // segments column: single object with full conversation text
+    const segmentsPayload = { text: script };
+
+    // speakers column: sorted alphabetically, name + voice_url only
+    const speakersPayload = [...speakers]
+      .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+      .map(s => ({ name: s.label, voice_url: s.voice_url || '' }));
+
     await saveMutation.mutateAsync({
       title: title || 'Untitled Conversation',
       full_script: script,
-      segments,
-      speakers,
-      status: 'pending'
+      segments: segmentsPayload,
+      speakers: speakersPayload,
+      status: 'pending',
     });
   };
 
   const handleGenerationComplete = () => {
-    toast.success('Conversational audio generated!');
+    toast.success('Saved — your conversational audio will be ready shortly!');
     setTimeout(() => navigate(createPageUrl('ConversationalList')), 300);
   };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Mic, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -121,7 +121,7 @@ export default function SpeakerCard({ speaker, index, segments, onVoiceSelect, o
                 </label>
                 <VoiceSelectionSection
                   selectedVoiceId={speaker.voice_id || ''}
-                  onSelectVoice={(id, name, type) => onVoiceSelect(id, name, type)}
+                  onSelectVoice={(id, name, type, url) => onVoiceSelect(id, name, type, url)}
                 />
               </div>
             </div>

@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { runCompletionCheck } from './completionChecker.js';
 
 /**
  * CRON JOBS PLACEHOLDER
@@ -48,6 +49,13 @@ export const initCronJobs = () => {
     // 2. Mix voice + music using ffmpeg or similar
     // 3. Store output_url and update status = 'completed'
     // console.log('[CRON] Checking pending audio mixes...');
+  });
+
+  // ── Completion Notification Checker ─────────────────────────────────────
+  // Runs every minute — finds completed records with no notification yet and fires one.
+  // Works regardless of how status was set (HTTP, webhook, cron, direct DB update).
+  cron.schedule('* * * * *', async () => {
+    await runCompletionCheck();
   });
 
   console.log('✅ CRON jobs initialized (generation logic pending implementation)');

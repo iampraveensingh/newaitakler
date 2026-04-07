@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Wand2, FileText, PenTool, Video, Users, Check, Zap, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -71,6 +71,10 @@ export default function GeneratingOverlay({ isVisible, type = 'default', title, 
   const gradient = gradientMap[type] || gradientMap.default;
   const glowColor = glowColorMap[type] || glowColorMap.default;
 
+  // Keep a stable ref so changing the callback never restarts the animation
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+
   useEffect(() => {
     if (!isVisible) {
       setCurrentStage(0);
@@ -85,13 +89,13 @@ export default function GeneratingOverlay({ isVisible, type = 'default', title, 
 
     const runStage = (stageIndex) => {
       if (completed) return;
-      
+
       if (stageIndex >= stages.length) {
         completed = true;
         setCurrentStage(stages.length - 1);
         setStageProgress(100);
         setOverallProgress(100);
-        if (autoComplete) setTimeout(() => onComplete?.(), 600);
+        if (autoComplete) setTimeout(() => onCompleteRef.current?.(), 600);
         return;
       }
 
@@ -130,7 +134,7 @@ export default function GeneratingOverlay({ isVisible, type = 'default', title, 
       clearTimeout(stageTimer);
       clearInterval(progressInterval);
     };
-  }, [isVisible, stages, autoComplete, onComplete]);
+  }, [isVisible, stages, autoComplete]); // onComplete intentionally excluded — handled via ref
 
   return (
     <AnimatePresence>

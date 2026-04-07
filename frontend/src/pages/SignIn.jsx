@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
-import { AudioLines, Loader2, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const FOOTER_LINKS = [
   { label: 'TOC', href: 'https://aisoftllc.com/tos.html' },
@@ -81,19 +81,14 @@ export default function SignIn() {
             transition={{ delay: 0.15, duration: 0.5 }}
             className="flex flex-col items-center mb-5"
           >
-            {/* Icon */}
-            <div className="relative mb-3">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 blur-lg opacity-50 scale-110" />
-              <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-blue-600 flex items-center justify-center shadow-xl">
-                <AudioLines className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
-              </div>
+            {/* Logo */}
+            <div className="mb-5">
+              <img
+                src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+                alt="AI Talker"
+                className="h-10 sm:h-12 w-auto object-contain mx-auto"
+              />
             </div>
-
-            {/* App name */}
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-300 via-purple-200 to-blue-300 bg-clip-text text-transparent">
-              Expressive Voice App
-            </h1>
-            <p className="text-slate-500 text-xs mt-1 tracking-wide uppercase">Creator Studio</p>
 
             {/* Centralized login notice */}
             <div className="mt-3 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-center">

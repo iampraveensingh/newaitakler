@@ -1,19 +1,19 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Users } from 'lucide-react';
 import SpeakerCard from './SpeakerCard';
+import { toast } from 'sonner';
 
 export default function SpeakerAssignmentSection({ speakers, segments, onSpeakersChange, onSegmentsChange }) {
 
-  const handleVoiceSelect = (speakerIndex, voiceId, voiceName, voiceType) => {
+  const handleVoiceSelect = (speakerIndex, voiceId, voiceName, voiceType, voiceUrl) => {
     const updated = [...speakers];
-    updated[speakerIndex] = { ...updated[speakerIndex], voice_id: voiceId, voice_name: voiceName, voice_type: voiceType };
+    updated[speakerIndex] = { ...updated[speakerIndex], voice_id: voiceId, voice_name: voiceName, voice_type: voiceType, voice_url: voiceUrl || '' };
     onSpeakersChange(updated);
 
     const label = speakers[speakerIndex].label;
     const updatedSegs = segments.map(seg =>
       seg.speaker_label === label
-        ? { ...seg, voice_id: voiceId, voice_name: voiceName, voice_type: voiceType }
+        ? { ...seg, voice_id: voiceId, voice_name: voiceName, voice_type: voiceType, voice_url: voiceUrl || '' }
         : seg
     );
     onSegmentsChange(updatedSegs);
@@ -44,12 +44,19 @@ export default function SpeakerAssignmentSection({ speakers, segments, onSpeaker
     }
   };
 
+  const MAX_SPEAKERS = 5;
+
   const handleAddSpeaker = () => {
+    if (speakers.length >= MAX_SPEAKERS) {
+      toast.error(`Maximum ${MAX_SPEAKERS} speakers allowed.`);
+      return;
+    }
     onSpeakersChange([...speakers, {
       label: `Speaker ${speakers.length + 1}`,
       voice_id: '',
       voice_name: '',
-      voice_type: ''
+      voice_type: '',
+      voice_url: '',
     }]);
   };
 
@@ -82,7 +89,7 @@ export default function SpeakerAssignmentSection({ speakers, segments, onSpeaker
             speaker={speaker}
             index={i}
             segments={segments}
-            onVoiceSelect={(id, name, type) => handleVoiceSelect(i, id, name, type)}
+            onVoiceSelect={(id, name, type, url) => handleVoiceSelect(i, id, name, type, url)}
             onLabelChange={(newLabel) => handleLabelChange(i, newLabel)}
             onRemove={() => handleRemoveSpeaker(i)}
             canRemove={speakers.length > 1}
@@ -92,12 +99,14 @@ export default function SpeakerAssignmentSection({ speakers, segments, onSpeaker
 
       <motion.button
         onClick={handleAddSpeaker}
-        whileHover={{ scale: 1.02, y: -1 }}
-        whileTap={{ scale: 0.98 }}
-        className="w-full py-3 rounded-xl border-2 border-dashed border-slate-700 hover:border-violet-500/50 text-slate-400 hover:text-violet-300 flex items-center justify-center gap-2 transition-colors"
+        disabled={speakers.length >= MAX_SPEAKERS}
+        whileHover={speakers.length < MAX_SPEAKERS ? { scale: 1.02, y: -1 } : {}}
+        whileTap={speakers.length < MAX_SPEAKERS ? { scale: 0.98 } : {}}
+        className="w-full py-3 rounded-xl border-2 border-dashed border-slate-700 hover:border-violet-500/50 text-slate-400 hover:text-violet-300 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-700 disabled:hover:text-slate-400"
+        title={speakers.length >= MAX_SPEAKERS ? `Maximum ${MAX_SPEAKERS} speakers allowed` : 'Add Speaker'}
       >
         <Plus className="w-4 h-4" />
-        Add Speaker
+        {speakers.length >= MAX_SPEAKERS ? `Max ${MAX_SPEAKERS} speakers reached` : 'Add Speaker'}
       </motion.button>
     </div>
   );

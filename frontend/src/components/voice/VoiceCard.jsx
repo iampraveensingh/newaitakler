@@ -1,15 +1,19 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Play, Pause, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { generateBarHeights } from '@/components/audio/AudioWaveformPlayer';
 
 const voiceCategories = {
-  'emotional':    { emoji: '❤️', label: 'Emotional',    color: 'from-pink-500 to-rose-500'     },
-  'professional': { emoji: '💼', label: 'Professional', color: 'from-blue-500 to-cyan-500'     },
-  'expressive':   { emoji: '🎭', label: 'Expressive',   color: 'from-amber-500 to-orange-500'  },
-  'cloned':       { emoji: '🐑', label: 'Cloned',       color: 'from-green-500 to-emerald-500' },
-  'custom':       { emoji: '✨', label: 'Custom',       color: 'from-violet-500 to-purple-500' },
+  'conversational': { emoji: '💬', label: 'Conversational', color: 'from-sky-500 to-blue-500',       badge: 'bg-sky-500/15 text-sky-300 border-sky-500/25'        },
+  'narration':      { emoji: '📖', label: 'Narration',      color: 'from-teal-500 to-emerald-500',   badge: 'bg-teal-500/15 text-teal-300 border-teal-500/25'     },
+  'characters':     { emoji: '🎭', label: 'Characters',     color: 'from-purple-500 to-pink-500',    badge: 'bg-purple-500/15 text-purple-300 border-purple-500/25'},
+  'social_media':   { emoji: '📱', label: 'Social Media',   color: 'from-rose-500 to-orange-500',    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/25'      },
+  'educational':    { emoji: '🎓', label: 'Educational',    color: 'from-green-500 to-teal-500',     badge: 'bg-green-500/15 text-green-300 border-green-500/25'   },
+  'advertisement':  { emoji: '📢', label: 'Advertisement',  color: 'from-orange-500 to-amber-500',   badge: 'bg-orange-500/15 text-orange-300 border-orange-500/25'},
+  'entertainment':  { emoji: '⭐', label: 'Entertainment',  color: 'from-yellow-500 to-orange-500',  badge: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/25'},
+  'cloned':         { emoji: '🐑', label: 'Cloned',         color: 'from-green-500 to-emerald-500',  badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'},
+  'custom':         { emoji: '✨', label: 'Custom',         color: 'from-violet-500 to-purple-500',  badge: 'bg-violet-500/15 text-violet-300 border-violet-500/25'},
 };
 
 const BAR_COUNT = 16;
@@ -399,12 +403,16 @@ export default function VoiceCard({ voice, selectedVoiceId, onSelectVoice }) {
       startAnalysis, startShimmer, stopAll, fadeToIdle]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
-  const categoryInfo = voiceCategories[voice.type] || { emoji: '🎤', label: 'Voice', color: 'from-slate-500 to-slate-600' };
+  const [isHovered, setIsHovered] = useState(false);
+  const categoryInfo = voiceCategories[voice.type] || { emoji: '🎤', label: 'Voice', color: 'from-slate-500 to-slate-600', badge: 'bg-slate-500/15 text-slate-300 border-slate-500/25' };
   const isSelected   = selectedVoiceId === voice.id;
+  const showDesc     = (isHovered || isSelected) && voice.description;
 
   return (
     <motion.div
       onClick={() => onSelectVoice(voice.id, voice.name, voice.type, voice.audio || '')}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
@@ -429,9 +437,34 @@ export default function VoiceCard({ voice, selectedVoiceId, onSelectVoice }) {
         </div>
         <div className="flex-1 min-w-0 pr-5">
           <h4 className="font-medium text-white text-sm truncate leading-tight">{voice.name}</h4>
-          <span className="text-[10px] text-slate-500">{categoryInfo.emoji} {categoryInfo.label}</span>
+          {/* Category pill */}
+          <span className={cn(
+            "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium border mt-0.5",
+            categoryInfo.badge,
+          )}>
+            {categoryInfo.emoji} {categoryInfo.label}
+          </span>
         </div>
       </div>
+
+      {/* Description — visible on hover or when selected */}
+      <AnimatePresence>
+        {showDesc && (
+          <motion.p
+            key="desc"
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginBottom: 6 }}
+            exit={{   opacity: 0, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.18 }}
+            className={cn(
+              "text-[11px] leading-snug px-1 truncate",
+              isSelected ? 'text-violet-300' : 'text-slate-400',
+            )}
+          >
+            {voice.description}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Canvas waveform + play button */}
       <div className="flex items-center gap-2 bg-slate-900/50 rounded-lg p-2">

@@ -14,7 +14,6 @@ import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { downloadSrt } from '@/utils/downloadSrt';
 import AudioWaveformPlayer from '@/components/audio/AudioWaveformPlayer';
 import DisabledWaveform from '@/components/audio/DisabledWaveform';
 
@@ -107,7 +106,7 @@ export default function ConversationalList() {
                             <Clock className="w-3 h-3" />
                             {formatDistanceToNow(new Date(conv.created_at), { addSuffix: true })}
                           </span>
-                          {conv.speakers && (
+                          {Array.isArray(conv.speakers) && conv.speakers.length > 0 && (
                             <span className="text-xs text-slate-500">
                               · {conv.speakers.length} speaker{conv.speakers.length !== 1 ? 's' : ''}
                             </span>
@@ -118,11 +117,11 @@ export default function ConversationalList() {
                     <StatusBadge status={conv.status} size="sm" />
                   </div>
 
-                  {conv.segments?.slice(0, 2).map((seg, j) => (
-                    <p key={j} className="text-xs text-slate-400 truncate mb-0.5">
-                      <span className="text-slate-500">{seg.speaker_label}:</span> {seg.text}
+                  {conv.segments?.text && (
+                    <p className="text-xs text-slate-400 line-clamp-2 mb-0.5">
+                      {conv.segments.text.slice(0, 160)}{conv.segments.text.length > 160 ? '…' : ''}
                     </p>
-                  ))}
+                  )}
 
                   <div className="mt-3 pt-3 border-t border-slate-800/50">
                     {conv.audio_url ? (
@@ -134,19 +133,46 @@ export default function ConversationalList() {
 
                   <div className="flex items-center justify-end gap-2 mt-2">
                     {conv.audio_url && (
-                      <a href={conv.audio_url} download={`${conv.title || 'conversation'}.mp3`}>
-                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white gap-1">
-                          <Download className="w-4 h-4" /> Download
-                        </Button>
-                      </a>
-                    )}
-                    {conv.segments?.length > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Download SRT"
-                        onClick={() => downloadSrt(null, conv.duration, conv.title || 'conversation', conv.segments)}
+                        className="text-slate-400 hover:text-white gap-1"
+                        onClick={async () => {
+                          try {
+                            const res  = await fetch(conv.audio_url);
+                            const blob = await res.blob();
+                            const url  = URL.createObjectURL(blob);
+                            const a    = document.createElement('a');
+                            a.href     = url;
+                            a.download = `${conv.title || 'conversation'}.mp3`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          } catch {
+                            toast.error('Download failed');
+                          }
+                        }}
+                      >
+                        <Download className="w-4 h-4" /> Download
+                      </Button>
+                    )}
+                    {conv.srt && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-slate-400 hover:text-emerald-400 gap-1"
+                        onClick={() => {
+                          const blob = new Blob([conv.srt], { type: 'text/plain' });
+                          const url  = URL.createObjectURL(blob);
+                          const a    = document.createElement('a');
+                          a.href     = url;
+                          a.download = `${conv.title || 'conversation'}.srt`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }}
                       >
                         <Subtitles className="w-4 h-4" /> SRT
                       </Button>

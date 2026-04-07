@@ -1,6 +1,21 @@
 import { db } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { buildOrderBy, buildWhere } from '../utils/query.js';
+import { pushNotification } from './notificationController.js';
+
+// Notification config per table — fires once on successful CREATE
+const NOTIF_MAP = {
+  voiceovers:             (r) => ({ icon: '🎤', title: 'Voiceover Queued',        message: `"${r.title || 'Untitled'}" has been queued for generation.`,          type: 'voiceover'     }),
+  voice_clones:           (r) => ({ icon: '🐑', title: 'Voice Clone Submitted',   message: `"${r.name  || 'Untitled'}" is being cloned and will be ready shortly.`, type: 'clone'         }),
+  custom_voices:          (r) => ({ icon: '✨', title: 'Custom Voice Created',     message: `"${r.name  || 'Untitled'}" is being processed.`,                       type: 'custom_voice'  }),
+  audio_mixes:            (r) => ({ icon: '🎛️', title: 'Audio Mix Queued',         message: `"${r.name  || 'Untitled'}" has been queued for mixing.`,               type: 'audio_mix'     }),
+  transcriptions:         (r) => ({ icon: '🎥', title: 'Transcription Queued',    message: `"${r.title || 'Untitled'}" has been submitted for transcription.`,      type: 'transcription' }),
+  conversational_voices:  (r) => ({ icon: '👥', title: 'Conversation Queued',     message: `"${r.title || 'Untitled'}" has been submitted for generation.`,         type: 'conversational'}),
+  brand_studio_projects:  (r) => ({ icon: '🎨', title: 'Brand Project Created',   message: `"${r.title || 'Untitled'}" has been created and is ready to edit.`,     type: 'brand_studio'  }),
+  audiobooks:             (r) => ({ icon: '📖', title: 'Audiobook Queued',         message: `"${r.title || 'Untitled'}" has been queued for audio generation.`,       type: 'audiobook'     }),
+  vsl_copies:             (r) => ({ icon: '📋', title: 'VSL Script Generated',    message: `VSL script for "${r.product_name || 'your product'}" is ready.`,        type: 'vsl'           }),
+  ad_copies:              (r) => ({ icon: '📝', title: 'Ad Copy Generated',       message: `Ad copy for "${r.product_name || 'your product'}" is ready.`,           type: 'adcopy'        }),
+};
 
 /**
  * Creates a standard CRUD controller for a table.
@@ -78,7 +93,15 @@ export function createEntityController(tableName, fields, userScoped = true) {
       );
 
       const [rows] = await db.query(`SELECT * FROM ${tableName} WHERE id = ?`, [result.insertId]);
-      return successResponse(res, parseJsonFields(rows[0]), 'Created successfully', 201);
+      const newRow = parseJsonFields(rows[0]);
+
+      // Fire notification asynchronously — never blocks the response
+      if (userScoped && NOTIF_MAP[tableName]) {
+        const notif = NOTIF_MAP[tableName](newRow);
+        pushNotification(req.user.id, { ...notif, entityId: newRow.id, entityType: tableName });
+      }
+
+      return successResponse(res, newRow, 'Created successfully', 201);
     } catch (error) {
       console.error(`Create ${tableName} error:`, error);
       return errorResponse(res, `Failed to create ${tableName}`, 500);
@@ -104,7 +127,8 @@ export function createEntityController(tableName, fields, userScoped = true) {
 
       const [rows] = await db.query(`SELECT * FROM ${tableName} WHERE id = ?`, [req.params.id]);
       if (!rows.length) return errorResponse(res, 'Record not found', 404);
-      return successResponse(res, parseJsonFields(rows[0]), 'Updated successfully');
+      const updatedRow = parseJsonFields(rows[0]);
+      return successResponse(res, updatedRow, 'Updated successfully');
     } catch (error) {
       console.error(`Update ${tableName} error:`, error);
       return errorResponse(res, `Failed to update ${tableName}`, 500);

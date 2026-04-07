@@ -1,53 +1,57 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  AudioLines, Copy, Sparkles, Video, FileText, PenTool, Music2
-} from 'lucide-react';
+import { AudioLines, Copy, Sparkles, Video, FileText, Music2, Users } from 'lucide-react';
 
 const actions = [
-  { 
-    name: 'Create Voiceover', 
-    page: 'CreateVoiceover', 
-    icon: AudioLines, 
+  {
+    name: 'Create Voiceover',
+    page: 'CreateVoiceover',
+    icon: AudioLines,
     gradient: 'from-violet-500 to-purple-500',
     description: 'Convert text to speech'
   },
-  { 
-    name: 'Clone Voice', 
-    page: 'CloneVoice', 
-    icon: Copy, 
+  {
+    name: 'Clone Voice',
+    page: 'CloneVoice',
+    icon: Copy,
     gradient: 'from-blue-500 to-cyan-500',
     description: 'Create AI voice clone'
   },
-  { 
-    name: 'Custom Voice', 
-    page: 'CreateCustomVoice', 
-    icon: Sparkles, 
+  {
+    name: 'Custom Voice',
+    page: 'CreateCustomVoice',
+    icon: Sparkles,
     gradient: 'from-amber-500 to-orange-500',
     description: 'Design unique voice'
   },
-  { 
-    name: 'Transcribe', 
-    page: 'Transcribe', 
-    icon: Video, 
+  {
+    name: 'Transcribe',
+    page: 'Transcribe',
+    icon: Video,
     gradient: 'from-emerald-500 to-teal-500',
     description: 'Video to text'
   },
-  { 
-    name: 'VSL Copy', 
-    page: 'CreateVSL', 
-    icon: FileText, 
+  {
+    name: 'VSL Copy',
+    page: 'CreateVSL',
+    icon: FileText,
     gradient: 'from-rose-500 to-pink-500',
     description: 'Sales video scripts'
   },
-  { 
-    name: 'Audio Mixer', 
-    page: 'AudioMixer', 
-    icon: Music2, 
+  {
+    name: 'Audio Mixer',
+    page: 'AudioMixer',
+    icon: Music2,
     gradient: 'from-indigo-500 to-violet-500',
     description: 'Mix voice & music'
+  },
+  {
+    name: 'Conversation',
+    page: 'CreateConversational',
+    icon: Users,
+    gradient: 'from-fuchsia-500 to-pink-500',
+    description: 'Multi-speaker audio'
   },
 ];
 

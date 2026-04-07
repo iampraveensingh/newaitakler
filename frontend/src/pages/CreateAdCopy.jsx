@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import AddonUpgradeCard from '@/components/dashboard/AddonUpgradeCard';
@@ -23,7 +23,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import GeneratingOverlay from '@/components/ui/GeneratingOverlay';
 import { useUsageLimits } from '@/hooks/useUsageLimits';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +35,108 @@ const platforms = [
   { value: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'from-blue-700 to-blue-600' },
   { value: 'twitter', label: 'Twitter/X', icon: Twitter, color: 'from-slate-700 to-slate-600' },
 ];
+
+// ─── Per-platform LLM schema + formatter ────────────────────────────────────
+const platformConfig = {
+  email: {
+    promptHint: 'a professional marketing email',
+    formatInstructions:
+      'Write a complete marketing email. Include: a compelling subject line, a warm greeting (e.g. "Hello Innovator,"), engaging body paragraphs that highlight benefits, a clear call-to-action with the product URL, a closing phrase, and a sender signature.',
+    fields: {
+      subject:   { type: 'string', description: 'Email subject line' },
+      greeting:  { type: 'string', description: 'Opening greeting, e.g. "Hello Innovator,"' },
+      body:      { type: 'string', description: 'Well-structured body paragraphs' },
+      cta_text:  { type: 'string', description: 'Call-to-action button/link label' },
+      cta_url:   { type: 'string', description: 'Product or landing page URL' },
+      closing:   { type: 'string', description: 'Closing phrase, e.g. "Warm regards,"' },
+      signature: { type: 'string', description: 'Sender name or brand' },
+    },
+    format: (v) =>
+      `Subject: ${v.subject || ''}\n\n${v.greeting || ''}\n\n${v.body || ''}\n\n🔗 ${v.cta_text || 'Shop Now'}: ${v.cta_url || ''}\n\n${v.closing || ''}\n${v.signature || ''}`,
+  },
+  facebook: {
+    promptHint: 'a Facebook/Meta ad',
+    formatInstructions:
+      'Write a Facebook ad with a punchy headline, an engaging body (emojis welcome), and a clear call to action. Respect Facebook character limits.',
+    fields: {
+      headline: { type: 'string', description: 'Short, attention-grabbing headline' },
+      body:     { type: 'string', description: 'Ad body text with storytelling and benefits' },
+      cta:      { type: 'string', description: 'Call-to-action phrase, e.g. "Shop Now →"' },
+    },
+    format: (v) => `${v.headline || ''}\n\n${v.body || ''}\n\n👉 ${v.cta || ''}`,
+  },
+  instagram: {
+    promptHint: 'an Instagram ad caption',
+    formatInstructions:
+      'Write an Instagram caption-style ad. Lead with a hook, follow with benefit-driven copy, include a CTA, and end with relevant hashtags.',
+    fields: {
+      hook:     { type: 'string', description: 'Opening hook line' },
+      caption:  { type: 'string', description: 'Main caption body' },
+      cta:      { type: 'string', description: 'Call to action, e.g. "Link in bio →"' },
+      hashtags: { type: 'string', description: 'Relevant hashtags string' },
+    },
+    format: (v) => `${v.hook || ''}\n\n${v.caption || ''}\n\n${v.cta || ''}\n\n${v.hashtags || ''}`,
+  },
+  google: {
+    promptHint: 'a Google Ads campaign',
+    formatInstructions:
+      'Write a Google Responsive Search Ad. Provide 3 headlines (max 30 chars each), 2 descriptions (max 90 chars each), and a display URL path suggestion.',
+    fields: {
+      headline1:    { type: 'string', description: 'Headline 1 (≤30 chars)' },
+      headline2:    { type: 'string', description: 'Headline 2 (≤30 chars)' },
+      headline3:    { type: 'string', description: 'Headline 3 (≤30 chars)' },
+      description1: { type: 'string', description: 'Description 1 (≤90 chars)' },
+      description2: { type: 'string', description: 'Description 2 (≤90 chars)' },
+      display_path: { type: 'string', description: 'URL path suggestion, e.g. "sale/deals"' },
+    },
+    format: (v) =>
+      `Headlines:\n• ${v.headline1 || ''}\n• ${v.headline2 || ''}\n• ${v.headline3 || ''}\n\nDescriptions:\n• ${v.description1 || ''}\n• ${v.description2 || ''}\n\nDisplay Path: ${v.display_path || ''}`,
+  },
+  linkedin: {
+    promptHint: 'a LinkedIn sponsored post ad',
+    formatInstructions:
+      'Write a professional LinkedIn ad. Start with a strong hook, follow with value-driven body content, include a clear CTA, and add relevant professional hashtags.',
+    fields: {
+      hook:     { type: 'string', description: 'Opening hook to stop the scroll' },
+      body:     { type: 'string', description: 'Professional body with value proposition' },
+      cta:      { type: 'string', description: 'Call to action' },
+      hashtags: { type: 'string', description: 'Professional hashtags' },
+    },
+    format: (v) => `${v.hook || ''}\n\n${v.body || ''}\n\n${v.cta || ''}\n\n${v.hashtags || ''}`,
+  },
+  twitter: {
+    promptHint: 'a Twitter/X ad or sponsored tweet',
+    formatInstructions:
+      'Write a Twitter/X ad tweet (max 280 characters including hashtags). It should be punchy, scroll-stopping, and end with 1-3 hashtags.',
+    fields: {
+      tweet:    { type: 'string', description: 'Main tweet text (≤240 chars)' },
+      hashtags: { type: 'string', description: '1-3 hashtags' },
+    },
+    format: (v) => `${v.tweet || ''}\n\n${v.hashtags || ''}`,
+  },
+};
+
+const getPlatformSchema = (platform) => {
+  const fields = platformConfig[platform]?.fields || platformConfig.facebook.fields;
+  const variationSchema = { type: 'object', properties: fields };
+  return {
+    type: 'object',
+    properties: {
+      variation1: variationSchema,
+      variation2: variationSchema,
+      variation3: variationSchema,
+    },
+  };
+};
+
+const formatVariation = (platform, raw) => {
+  if (!raw) return '';
+  const config = platformConfig[platform] || platformConfig.facebook;
+  // raw could be an object (structured) or a plain string (fallback)
+  if (typeof raw === 'string') return raw;
+  return config.format(raw);
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 const styles = [
   { value: 'aida', label: '⚡ AIDA', description: 'Attention-Interest-Desire-Action' },
@@ -56,6 +158,7 @@ const styles = [
 
 export default function CreateAdCopy() {
   const queryClient = useQueryClient();
+  const navigate    = useNavigate();
   const { checkLimit } = useUsageLimits();
   const adLimit = checkLimit('ad');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -120,22 +223,29 @@ export default function CreateAdCopy() {
       toast.success(editId ? 'Ad copy updated!' : 'Ad copy saved!');
     }
   });
-const formatAd = (ad) => {
-  if (!ad) return '';
-
-  return `Headline:
-${ad.headline || ''}
-
-Description:
-${ad.description || ''}
-
-Call To Action:
-${ad.call_to_action || ''}`;
-};
   const generateAdCopy = async () => {
+    if (!formData.product_name.trim()) {
+      toast.error('Product name is required.');
+      return;
+    }
+    if (formData.product_name.trim().length < 2) {
+      toast.error('Product name must be at least 2 characters.');
+      return;
+    }
+    if (!formData.product_url.trim()) {
+      toast.error('Product URL is required.');
+      return;
+    }
+    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w]{2,}(\/\S*)?$/i;
+    if (!urlPattern.test(formData.product_url.trim())) {
+      toast.error('Please enter a valid product URL (e.g. https://example.com).');
+      return;
+    }
     if (!editId && !adLimit.allowed) return;
     setShowOverlay(true);
     setIsGenerating(true);
+
+    const pConfig = platformConfig[formData.platform] || platformConfig.facebook;
 
     // Scrape product page if URL is provided
     let scrapedContext = '';
@@ -153,63 +263,66 @@ ${scraped.bodyText || ''}
 ---
 Use the above scraped content to write highly relevant and compelling ad copy that reflects the actual product features, benefits, and language used on the product page.`;
       } catch {
-        // Silently fall back — generate using URL reference only
+        // Silently fall back
       } finally {
         setIsScraping(false);
       }
     }
 
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Create 3 different ${formData.platform} ad copy variations for:
-        Product: ${formData.product_name}
-        URL: ${formData.product_url || 'Not provided'}
-        Style: ${formData.style}
-        ${scrapedContext}
-        Each variation should be a complete ad copy including headline, description, and call to action.
-        Optimize for ${formData.platform} best practices and character limits.
-        Make each variation have a different angle or approach.`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          variation1: { type: 'string', description: 'Complete ad copy variation 1' },
-          variation2: { type: 'string', description: 'Complete ad copy variation 2' },
-          variation3: { type: 'string', description: 'Complete ad copy variation 3' }
-        }
-      }
-    });
-    setGeneratedCopies({
-     variations: [
-    formatAd(response?.variation1),
-    formatAd(response?.variation2),
-    formatAd(response?.variation3)
-  ]
-   //variations: [response.variation1, response.variation2, response.variation3]
-    });
-    setShowOverlay(false);
-    setIsGenerating(false);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Create 3 different variations of ${pConfig.promptHint} for:
+Product: ${formData.product_name}
+URL: ${formData.product_url || 'Not provided'}
+Style: ${formData.style}
+${scrapedContext}
+
+${pConfig.formatInstructions}
+
+Make each variation take a different angle or approach. Return variation1, variation2, variation3 — each as a structured object.`,
+        response_json_schema: getPlatformSchema(formData.platform),
+      });
+
+      setGeneratedCopies({
+        variations: [
+          formatVariation(formData.platform, response?.variation1),
+          formatVariation(formData.platform, response?.variation2),
+          formatVariation(formData.platform, response?.variation3),
+        ],
+      });
+    } finally {
+      setShowOverlay(false);
+      setIsGenerating(false);
+    }
   };
 
   const regenerateVariation = async (index) => {
     setIsGenerating(true);
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Create a new ${formData.platform} ad copy for:
-        Product: ${formData.product_name}
-        Style: ${formData.style}
-        
-        Current copy: ${generatedCopies.variations[index]}
-        
-        Create a completely different and more compelling version.`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          copy: { type: 'string' }
-        }
-      }
-    });
-    const newVariations = [...generatedCopies.variations];
-    newVariations[index] = response.copy;
-    setGeneratedCopies({ variations: newVariations });
-    setIsGenerating(false);
+    const pConfig = platformConfig[formData.platform] || platformConfig.facebook;
+    const singleSchema = {
+      type: 'object',
+      properties: { variation: { type: 'object', properties: pConfig.fields } },
+    };
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Create a new variation of ${pConfig.promptHint} for:
+Product: ${formData.product_name}
+Style: ${formData.style}
+
+${pConfig.formatInstructions}
+
+Current copy to improve upon:
+${generatedCopies.variations[index]}
+
+Return a completely different and more compelling version as a structured object under "variation".`,
+        response_json_schema: singleSchema,
+      });
+      const newVariations = [...generatedCopies.variations];
+      newVariations[index] = formatVariation(formData.platform, response?.variation);
+      setGeneratedCopies({ variations: newVariations });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const saveAdCopy = (variationIndex) => {
@@ -226,9 +339,9 @@ Use the above scraped content to write highly relevant and compelling ad copy th
     toast.success('Copied to clipboard!');
   };
 
-  const handleOverlayComplete = () => {
+  const handleOverlayComplete = useCallback(() => {
     setShowOverlay(false);
-  };
+  }, []);
 
   const selectedPlatform = platforms.find(p => p.value === formData.platform);
   const PlatformIcon = selectedPlatform?.icon || Facebook;
@@ -498,13 +611,20 @@ Use the above scraped content to write highly relevant and compelling ad copy th
                               <Save className="w-4 h-4 mr-2" /> Save This Version
                             </Button>
                           </motion.div>
-                          <Link to={createPageUrl('CreateVoiceover')} className="flex-1">
-                            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                              <Button variant="outline" className="w-full border-slate-700 h-11">
-                                <Mic className="w-4 h-4 mr-2" /> Turn into Voiceover
-                              </Button>
-                            </motion.div>
-                          </Link>
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                            <Button
+                              variant="outline"
+                              className="w-full border-violet-500/50 text-violet-300 hover:bg-violet-500/10 hover:border-violet-400 h-11 transition-all"
+                              onClick={() => navigate(createPageUrl('CreateVoiceover'), {
+                                state: {
+                                  prefillScript: copy,
+                                  prefillTitle:  `${formData.product_name || 'Ad Copy'} — ${platforms.find(p => p.value === formData.platform)?.label || formData.platform}`,
+                                }
+                              })}
+                            >
+                              <Mic className="w-4 h-4 mr-2" /> Turn into Voiceover
+                            </Button>
+                          </motion.div>
                         </div>
                       </GlassCard>
                     </motion.div>

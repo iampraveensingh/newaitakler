@@ -20,7 +20,7 @@ export default function CloneVoice() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    language: '',
+    language: 'en',
     clone_mode: 'standard',
     is_public: false,
     sample_url: '',
@@ -33,10 +33,7 @@ export default function CloneVoice() {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['voiceClones'] });
       try {
-        await Promise.all([
-          base44.trackUsage('clones', 1),
-          base44.trackUsage('credits', 1),
-        ]);
+        await base44.trackUsage('clones', 1);
       } catch (e) {
         console.warn('Usage tracking failed:', e);
       } finally {
@@ -52,7 +49,21 @@ export default function CloneVoice() {
   const cloneLimit = checkLimit('clones');
 
   const handleNext = () => {
+    if (currentStep === 1) {
+      if (!formData.name.trim()) {
+        toast.error('Voice name is required.');
+        return;
+      }
+      if (formData.name.trim().length < 2) {
+        toast.error('Voice name must be at least 2 characters.');
+        return;
+      }
+    }
     if (currentStep === 2) {
+      if (!formData.sample_url) {
+        toast.error('Please upload an audio sample before continuing.');
+        return;
+      }
       if (!cloneLimit.allowed) return;
       cloneVoiceMutation.mutate(formData);
     } else {
