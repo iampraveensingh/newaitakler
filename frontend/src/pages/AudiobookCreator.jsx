@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useUsageLimits } from '@/hooks/useUsageLimits';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Upload, AudioLines, Loader2, CheckCircle2, Lock, AlertCircle,
@@ -14,6 +15,7 @@ import { createPageUrl } from '@/utils';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import VoiceSelectionSection from '@/components/voice/VoiceSelectionSection';
+import GeneratingOverlay from '@/components/ui/GeneratingOverlay';
 
 // Same language list as CreateVoiceover
 const languages = [
@@ -65,6 +67,8 @@ function StepLabel({ number, label, locked }) {
 export default function AudiobookCreator() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { checkLimit } = useUsageLimits();
+  const audiobookLimit = checkLimit('audiobook');
   const fileInputRef = useRef(null);
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -78,7 +82,8 @@ export default function AudiobookCreator() {
   const [voiceType, setVoiceType] = useState('');
   const [voiceUrl, setVoiceUrl]   = useState('');
   const [language, setLanguage]   = useState('en');
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading]   = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Track original values from DB to detect meaningful changes on edit
   const originalFileUrl = useRef('');
@@ -118,7 +123,14 @@ export default function AudiobookCreator() {
       if (editId) return base44.entities.Audiobook.update(editId, data);
       return base44.entities.Audiobook.create(data);
     },
-    onSuccess: () => queryClient.invalidateQueries(['audiobooks']),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries(['audiobooks']);
+      // Only track on create, not on update
+      if (!editId) {
+        base44.trackUsage('audiobook', 1);
+        queryClient.invalidateQueries({ queryKey: ['monthlyUsage'] });
+      }
+    },
   });
 
   // ── File Upload ───────────────────────────────────────────────────────────
@@ -179,7 +191,12 @@ export default function AudiobookCreator() {
   const handleGenerate = async () => {
     if (!fileUrl) { toast.error('Please upload an eBook first.'); return; }
     if (!voiceId) { toast.error('Please select a voice.'); return; }
+    if (!audiobookLimit.allowed) {
+      toast.error(`Audiobook limit reached (${audiobookLimit.used}/${audiobookLimit.limit}). Please upgrade your plan.`);
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
       await saveMutation.mutateAsync({
         title: title || 'Untitled Audiobook',
@@ -190,13 +207,18 @@ export default function AudiobookCreator() {
         voice_type: voiceType,
         voice_url:  voiceUrl,
         language,
-        status: 'pending',   // always pending on initial generate
+        status: 'pending',
       });
-      toast.success('Audiobook submitted! Audio will be ready shortly.');
-      setTimeout(() => navigate(createPageUrl('AudiobookList')), 400);
+      // Let the overlay finish its animation — onComplete handles navigation
     } catch {
+      setIsSubmitting(false);
       toast.error('Failed to submit. Please try again.');
     }
+  };
+
+  const handleOverlayComplete = () => {
+    toast.success('Audiobook submitted! Audio will be ready shortly.');
+    navigate(createPageUrl('AudiobookList'));
   };
 
   // ── Save Changes (edit mode) ──────────────────────────────────────────────
@@ -235,7 +257,7 @@ export default function AudiobookCreator() {
     }
   };
 
-  const canSubmit = !!fileUrl && !!voiceId;
+  const canSubmit = !!fileUrl && !!voiceId && (editId || audiobookLimit.allowed);
 
   // Show loading skeleton while fetching existing record
   if (editId && loadingExisting) {
@@ -264,6 +286,32 @@ export default function AudiobookCreator() {
         backTo="AudiobookList"
         gradient="from-amber-500 to-orange-500"
       />
+
+      {/* Usage limit banner — only on create */}
+      {!editId && !audiobookLimit.allowed && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 px-5 py-4 rounded-xl bg-red-500/10 border border-red-500/30"
+        >
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <div>
+            <p className="text-red-300 font-semibold text-sm">Audiobook limit reached</p>
+            <p className="text-red-400/70 text-xs mt-0.5">
+              You've used {audiobookLimit.used} of {audiobookLimit.limit} audiobooks this month. Please upgrade your plan to create more.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Usage counter — only on create when within limit */}
+      {!editId && audiobookLimit.allowed && audiobookLimit.limit != null && (
+        <div className="flex justify-end">
+          <span className="text-xs text-slate-500">
+            {audiobookLimit.used} / {audiobookLimit.limit} audiobooks used this month
+          </span>
+        </div>
+      )}
 
       {/* Processing lock banner */}
       {isLocked && (
@@ -412,6 +460,14 @@ export default function AudiobookCreator() {
           </>
         )}
       </motion.div>
+
+      <GeneratingOverlay
+        isVisible={isSubmitting}
+        type="audiobook"
+        title="Submitting Audiobook..."
+        autoComplete
+        onComplete={handleOverlayComplete}
+      />
     </div>
   );
 }

@@ -296,6 +296,15 @@ export const integrations = {
   },
 };
 
+// ─── JOBS ─────────────────────────────────────────────────────────────────────
+
+export const jobs = {
+  search: async (keyword) => {
+    const { data } = await apiClient.get('/jobs/search', { params: { q: keyword } });
+    return data.data; // { jobs, sources }
+  },
+};
+
 // ─── DEFAULT COMPAT EXPORT ───────────────────────────────────────────────────
 // Keeps all existing page imports working: `import { base44 } from '@/api/base44Client'`
 
@@ -306,6 +315,7 @@ export const base44 = {
   agency,
   notifications,
   systemVoices,
+  jobs,
   trackUsage,
   integrations,
   functions: {

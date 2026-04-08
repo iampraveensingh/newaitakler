@@ -149,7 +149,7 @@ export default function Transcribe() {
         gradient="from-emerald-500 to-teal-500"
       />
 
-      <AddonUpgradeCard type="transcriber" addons={currentUser?.addons} />
+      <AddonUpgradeCard type="transcriber" addons={currentUser?.addons} currentPlan={currentUser?.base_plan} />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -305,7 +305,7 @@ export default function Transcribe() {
                   <div>
                     <p className="text-red-300 font-semibold text-sm">Usage limit reached</p>
                     <p className="text-red-400/80 text-sm mt-0.5">
-                      You have used {transLimit.used}/{transLimit.limit} transcriptions this month. Please upgrade your plan to continue.
+                      You have used {transLimit.used}/{transLimit.limit === -1 ? '∞' : transLimit.limit} transcriptions this month. Please upgrade your plan to continue.
                     </p>
                   </div>
                 </div>

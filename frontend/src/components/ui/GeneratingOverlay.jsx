@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Wand2, FileText, PenTool, Video, Users, Check, Zap, Star } from 'lucide-react';
+import { Sparkles, Wand2, FileText, PenTool, Video, Users, Check, Zap, Star, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const iconMap = {
@@ -9,6 +9,7 @@ const iconMap = {
   transcribe: Video,
   invite: Users,
   customvoice: Sparkles,
+  audiobook: BookOpen,
   default: Wand2
 };
 
@@ -42,6 +43,13 @@ const stagesMap = {
   customvoice: [
     { label: 'Your voice added in process.', duration: 3000, emoji: '✨' },
   ],
+  audiobook: [
+    { label: 'Uploading your eBook',          duration: 1500, emoji: '📤' },
+    { label: 'Analyzing eBook file',  duration: 2000, emoji: '📖' },
+    { label: 'Preparing narrator voice',      duration: 1800, emoji: '🎙️' },
+    { label: 'Queuing for audio generation',  duration: 1500, emoji: '⚙️' },
+    { label: 'Submitting to processing queue',duration: 1200, emoji: '✅' },
+  ],
 };
 
 const gradientMap = {
@@ -50,6 +58,7 @@ const gradientMap = {
   transcribe: 'from-emerald-500 via-teal-500 to-cyan-500',
   invite: 'from-violet-500 via-purple-500 to-pink-500',
   customvoice: 'from-amber-500 via-orange-500 to-yellow-500',
+  audiobook:   'from-amber-500 via-orange-500 to-red-500',
   default: 'from-violet-500 via-purple-500 to-pink-500',
 };
 
@@ -59,6 +68,7 @@ const glowColorMap = {
   transcribe: 'shadow-emerald-500/50',
   invite: 'shadow-violet-500/50',
   customvoice: 'shadow-amber-500/50',
+  audiobook:   'shadow-amber-500/50',
   default: 'shadow-violet-500/50',
 };
 

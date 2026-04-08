@@ -363,7 +363,7 @@ Return a completely different and more compelling version as a structured object
         gradient="from-indigo-500 to-blue-500"
       />
 
-      <AddonUpgradeCard type="adcopy" addons={currentUser?.addons} />
+      <AddonUpgradeCard type="adcopy" addons={currentUser?.addons} currentPlan={currentUser?.base_plan} />
 
       {/* Platform Quick Select */}
       <div className="flex flex-wrap gap-3">
@@ -470,7 +470,7 @@ Return a completely different and more compelling version as a structured object
                   <div>
                     <p className="text-red-300 font-semibold text-sm">Usage limit reached</p>
                     <p className="text-red-400/80 text-sm mt-0.5">
-                      You have used {adLimit.used}/{adLimit.limit} ad copies this month. Please upgrade your plan to continue.
+                      You have used {adLimit.used}/{adLimit.limit === -1 ? '∞' : adLimit.limit} ad copies this month. Please upgrade your plan to continue.
                     </p>
                   </div>
                 </div>

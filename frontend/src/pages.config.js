@@ -67,6 +67,8 @@ import CreateVoiceover from './pages/CreateVoiceover';
 import CustomVoiceList from './pages/CustomVoiceList';
 import DFYOffers from './pages/DFYOffers';
 import GettingStarted from './pages/GettingStarted';
+import GigCreator from './pages/GigCreator';
+import JobFinder from './pages/JobFinder';
 import Dashboard from './pages/Dashboard';
 import MixerList from './pages/MixerList';
 import SignIn from './pages/SignIn';
@@ -101,6 +103,8 @@ export const PAGES = {
     "BrandStudioList": BrandStudioList,
     "DFYOffers": DFYOffers,
     "GettingStarted": GettingStarted,
+    "GigCreator": GigCreator,
+    "JobFinder": JobFinder,
     "Dashboard": Dashboard,
     "MixerList": MixerList,
     "SignIn": SignIn,

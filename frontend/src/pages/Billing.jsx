@@ -5,13 +5,21 @@ import { motion } from 'framer-motion';
 import {
   CreditCard, Crown, Zap, Check, Star, Sparkles,
   Mic, Copy, FileText, PenTool, Video, TrendingUp,
-  Infinity, Users, Rocket, Shield, ArrowRight, Layers, MessageSquare, Music2
+  Infinity, Users, Rocket, Shield, ArrowRight, Layers, MessageSquare, Music2, BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import { cn } from '@/lib/utils';
+
+const PLAN_DISPLAY = {
+  FE:         { label: 'Front End',   color: 'from-slate-500 to-slate-600'  },
+  XTREME:     { label: 'Xtreme',      color: 'from-blue-500 to-indigo-600'  },
+  PRO:        { label: 'Pro',         color: 'from-violet-500 to-purple-600' },
+  UNLIMITED:  { label: 'Unlimited',   color: 'from-amber-500 to-orange-600' },
+  ALLACCESS:  { label: 'All Access',  color: 'from-emerald-500 to-teal-600' },
+};
 
 // Addon definitions with their limits
 const addonDefinitions = {
@@ -23,7 +31,6 @@ const addonDefinitions = {
     icon: Infinity,
     color: 'from-violet-500 via-purple-500 to-fuchsia-500',
     shadow: 'shadow-violet-500/30',
-    glow: 'violet',
     features: [
       'Unlimited voiceover credits',
       'Unlimited voice generations',
@@ -39,7 +46,6 @@ const addonDefinitions = {
     icon: FileText,
     color: 'from-emerald-500 via-teal-500 to-cyan-500',
     shadow: 'shadow-emerald-500/30',
-    glow: 'emerald',
     features: [
       'Unlimited VSL scripts',
       'Advanced frameworks',
@@ -49,13 +55,12 @@ const addonDefinitions = {
   },
   adcopy_edition: {
     key: 'adcopy_edition',
-    apiKeys: ['adcopy', 'ADCOPY', 'ad_copy', 'adcopy_edition'],
+    apiKeys: ['adcopy', 'ADCOPY', 'ad', 'AD', 'ad_copy', 'adcopy_edition'],
     name: 'Ad Copy Edition',
     description: 'Create unlimited ad copies for all platforms',
     icon: PenTool,
     color: 'from-amber-500 via-orange-500 to-red-500',
     shadow: 'shadow-amber-500/30',
-    glow: 'amber',
     features: [
       'Unlimited ad copies',
       'All platform templates',
@@ -71,7 +76,6 @@ const addonDefinitions = {
     icon: Video,
     color: 'from-emerald-500 via-teal-500 to-cyan-500',
     shadow: 'shadow-emerald-500/30',
-    glow: 'emerald',
     features: [
       'Unlimited transcriptions',
       'All output formats',
@@ -87,7 +91,6 @@ const addonDefinitions = {
     icon: Users,
     color: 'from-blue-500 via-indigo-500 to-violet-500',
     shadow: 'shadow-blue-500/30',
-    glow: 'blue',
     features: [
       'Unlimited team members',
       'Client workspaces',
@@ -97,17 +100,20 @@ const addonDefinitions = {
   }
 };
 
-const usageIcons = {
-  credits: Zap,
-  clones: Copy,
-  brand_studio: Layers,
-  vsl: FileText,
-  ad: PenTool,
-  custom: Sparkles,
-  transcriptions: Video,
-  conversational: MessageSquare,
-  audio_mix: Music2,
-};
+const usageConfig = [
+  { key: 'credits',        label: 'Voiceover Credits', usedKey: 'credits_used',        limitKey: 'credits',        icon: Zap        },
+  { key: 'clones',         label: 'Voice Clones',      usedKey: 'clones_used',         limitKey: 'clones',         icon: Copy       },
+  { key: 'brand_studio',   label: 'Brand Studio',      usedKey: 'brand_studio_used',   limitKey: 'brand_studio',   icon: Layers     },
+  { key: 'vsl',            label: 'VSL Scripts',       usedKey: 'vsl_used',            limitKey: 'vsl',            icon: FileText   },
+  { key: 'ad',             label: 'Ad Copies',         usedKey: 'ad_used',             limitKey: 'ad',             icon: PenTool    },
+  { key: 'custom',         label: 'Custom Voices',     usedKey: 'custom_used',         limitKey: 'custom',         icon: Sparkles   },
+  { key: 'transcriptions', label: 'Transcriptions',    usedKey: 'transcriptions_used', limitKey: 'transcriptions', icon: Video      },
+  { key: 'conversational', label: 'Conversational',    usedKey: 'conversational_used', limitKey: 'conversational', icon: MessageSquare },
+  { key: 'audio_mix',      label: 'Audio Mixes',       usedKey: 'audio_mix_used',      limitKey: 'audio_mix',      icon: Music2     },
+  { key: 'audiobook',      label: 'Audiobooks',        usedKey: 'audiobook_used',      limitKey: 'audiobook',      icon: BookOpen   },
+];
+
+const isUnlimitedVal = (v) => v === -1 || v === null;
 
 export default function Billing() {
   const { data: currentUser } = useQuery({
@@ -124,31 +130,32 @@ export default function Billing() {
   const currentMonthYear = new Date().toISOString().slice(0, 7);
   const { data: monthlyUsage } = useQuery({
     queryKey: ['monthlyUsage', currentUser?.id, currentMonthYear],
-    queryFn: () => base44.entities.UserUsageMonthly.filter({ 
-      user_id: currentUser?.id, 
-      month_year: currentMonthYear 
+    queryFn: () => base44.entities.UserUsageMonthly.filter({
+      user_id: currentUser?.id,
+      month_year: currentMonthYear
     }),
     enabled: !!currentUser?.id
   });
 
-  const basePlan = currentUser?.base_plan || 'FE';
-  const addons = currentUser?.addons || {};
-  const limits = planLimits?.[0] || {};
-  const usage = monthlyUsage?.[0] || {};
+  const basePlan   = (currentUser?.base_plan || 'FE').toUpperCase();
+  const addons     = currentUser?.addons || {};
+  const limits     = planLimits?.[0] || {};
+  const usage      = monthlyUsage?.[0] || {};
 
-  const usageData = [
-    { key: 'credits',        label: 'Voiceover Credits', used: usage.credits_used        || 0, limit: limits.credits        || 0 },
-    { key: 'clones',         label: 'Voice Clones',      used: usage.clones_used         || 0, limit: limits.clones          || 0 },
-    { key: 'brand_studio',   label: 'Brand Studio',      used: usage.brand_studio_used   || 0, limit: limits.brand_studio    || 0 },
-    { key: 'vsl',            label: 'VSL Scripts',       used: usage.vsl_used            || 0, limit: limits.vsl             || 0 },
-    { key: 'ad',             label: 'Ad Copies',         used: usage.ad_used             || 0, limit: limits.ad              || 0 },
-    { key: 'custom',         label: 'Custom Voices',     used: usage.custom_used         || 0, limit: limits.custom          || 0 },
-    { key: 'transcriptions', label: 'Transcriptions',    used: usage.transcriptions_used || 0, limit: limits.transcriptions  || 0 },
-    { key: 'conversational', label: 'Conversational',    used: usage.conversational_used || 0, limit: limits.conversational  || 0 },
-    { key: 'audio_mix',      label: 'Audio Mixes',       used: usage.audio_mix_used      || 0, limit: limits.audio_mix       || 0 },
-  ];
+  const isAllAccess   = basePlan === 'ALLACCESS';
+  const isUnlimitedPlan = basePlan === 'UNLIMITED';
+  const isFullyUnlocked = isAllAccess || isUnlimitedPlan;
 
-  const activeAddons = Object.entries(addons).filter(([_, active]) => active).map(([key]) => key);
+  const planInfo = PLAN_DISPLAY[basePlan] || { label: basePlan, color: 'from-slate-500 to-slate-600' };
+
+  const activeAddons = Object.entries(addons).filter(([, active]) => active).map(([key]) => key);
+
+  const usageData = usageConfig.map(cfg => {
+    const rawLimit = limits[cfg.limitKey];
+    const limit = isAllAccess ? -1 : (rawLimit ?? 0);
+    const used  = usage[cfg.usedKey] ?? 0;
+    return { ...cfg, used, limit };
+  });
 
   return (
     <div className="space-y-8">
@@ -167,22 +174,27 @@ export default function Billing() {
       >
         <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-transparent to-purple-500/10" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-violet-500/20 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
+
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <motion.div 
-              animate={{ 
+            <motion.div
+              animate={{
                 boxShadow: ['0 0 20px rgba(139,92,246,0.3)', '0 0 40px rgba(139,92,246,0.5)', '0 0 20px rgba(139,92,246,0.3)']
               }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center"
+              className={cn('w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center', planInfo.color)}
             >
               <Crown className="w-10 h-10 text-white" />
             </motion.div>
             <div>
               <p className="text-sm text-slate-400 mb-1">Current Plan</p>
-              <h2 className="text-3xl font-bold text-white">{basePlan} Plan</h2>
-              <div className="flex items-center gap-2 mt-2">
+              <h2 className="text-3xl font-bold text-white">{planInfo.label} Plan</h2>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {isFullyUnlocked && (
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    All Features Unlocked
+                  </Badge>
+                )}
                 {activeAddons.length > 0 && (
                   <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">
                     +{activeAddons.length} Add-on{activeAddons.length > 1 ? 's' : ''}
@@ -211,12 +223,13 @@ export default function Billing() {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {usageData.map((item, idx) => {
-            const Icon = usageIcons[item.key];
-            const percentage = item.limit > 0 ? Math.min((item.used / item.limit) * 100, 100) : 0;
-            const isNearLimit = percentage >= 80;
-            const isAtLimit = percentage >= 100;
+            const Icon      = item.icon;
+            const unlimited = isUnlimitedVal(item.limit);
+            const percentage = unlimited ? 100 : item.limit > 0 ? Math.min((item.used / item.limit) * 100, 100) : 0;
+            const isNearLimit = !unlimited && percentage >= 80;
+            const isAtLimit   = !unlimited && percentage >= 100;
 
             return (
               <motion.div
@@ -231,20 +244,20 @@ export default function Billing() {
                 </div>
                 <p className={cn(
                   "text-2xl font-bold",
-                  isAtLimit ? "text-red-400" : isNearLimit ? "text-amber-400" : "text-white"
+                  isAtLimit ? "text-red-400" : isNearLimit ? "text-amber-400" : unlimited ? "text-emerald-400" : "text-white"
                 )}>
                   {item.used}
                 </p>
-                <p className="text-xs text-slate-500">/ {item.limit}</p>
+                <p className="text-xs text-slate-500">/ {unlimited ? '∞' : item.limit}</p>
                 <p className="text-xs text-slate-400 mt-1">{item.label}</p>
-                <div className="h-1.5 rounded-full bg-slate-700/50 overflow-hidden mt-2">
+                <div className={cn('h-1.5 rounded-full overflow-hidden mt-2', unlimited ? 'bg-emerald-500/20' : 'bg-slate-700/50')}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
                     transition={{ duration: 0.5, delay: idx * 0.05 }}
                     className={cn(
                       "h-full rounded-full",
-                      isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-violet-500"
+                      unlimited ? "bg-emerald-500/50" : isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-violet-500"
                     )}
                   />
                 </div>
@@ -254,41 +267,62 @@ export default function Billing() {
         </div>
       </GlassCard>
 
-      {/* Unlimited Plan - Featured */}
+      {/* Unlimited / All Access Plan — Featured */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative"
       >
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 rounded-3xl blur-2xl" />
-        <div className="relative rounded-3xl border-2 border-amber-500/50 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
-          {/* Popular Badge */}
+        <div className={cn(
+          "relative rounded-3xl border-2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden",
+          isFullyUnlocked ? "border-emerald-500/60" : "border-amber-500/50"
+        )}>
+          {/* Badge */}
           <div className="absolute top-0 right-0">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold px-6 py-2 rounded-bl-2xl shadow-lg">
-              🔥 MOST POPULAR
-            </div>
+            {isFullyUnlocked ? (
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold px-6 py-2 rounded-bl-2xl shadow-lg">
+                ✓ YOUR PLAN
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold px-6 py-2 rounded-bl-2xl shadow-lg">
+                🔥 MOST POPULAR
+              </div>
+            )}
           </div>
 
           <div className="p-8 md:p-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-              {/* Left side - Plan info */}
+              {/* Left side */}
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-4">
-                  <motion.div 
-                    animate={{ 
+                  <motion.div
+                    animate={isFullyUnlocked ? {} : {
                       boxShadow: ['0 0 20px rgba(251,191,36,0.4)', '0 0 40px rgba(251,191,36,0.6)', '0 0 20px rgba(251,191,36,0.4)'],
                       scale: [1, 1.05, 1]
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center shadow-xl"
+                    className={cn(
+                      "w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl",
+                      isFullyUnlocked
+                        ? "bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500"
+                        : "bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500"
+                    )}
                   >
                     <Infinity className="w-10 h-10 text-white" />
                   </motion.div>
                   <div>
-                    <h3 className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
-                      Unlimited Plan
+                    <h3 className={cn(
+                      "text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
+                      isFullyUnlocked
+                        ? "from-emerald-400 via-teal-400 to-cyan-400"
+                        : "from-amber-400 via-orange-400 to-rose-400"
+                    )}>
+                      {isAllAccess ? 'All Access Plan' : 'Unlimited Plan'}
                     </h3>
-                    <p className="text-slate-400 mt-1">Remove all limits forever</p>
+                    <p className="text-slate-400 mt-1">
+                      {isFullyUnlocked ? 'You have full unlimited access' : 'Remove all limits forever'}
+                    </p>
                   </div>
                 </div>
 
@@ -303,18 +337,21 @@ export default function Billing() {
                     'Unlimited transcriptions',
                     'Unlimited conversational voices',
                     'Unlimited audio mixes',
+                    'Unlimited audiobooks',
                     'Priority processing',
                     'No monthly resets',
-                    'All future updates'
                   ].map((feature, idx) => (
                     <motion.div
                       key={feature}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
+                      transition={{ delay: idx * 0.04 }}
                       className="flex items-center gap-2"
                     >
-                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                      <div className={cn(
+                        "w-5 h-5 rounded-full bg-gradient-to-br flex items-center justify-center flex-shrink-0",
+                        isFullyUnlocked ? "from-emerald-500 to-teal-500" : "from-amber-500 to-orange-500"
+                      )}>
                         <Check className="w-3 h-3 text-white" />
                       </div>
                       <span className="text-sm text-slate-300">{feature}</span>
@@ -323,23 +360,40 @@ export default function Billing() {
                 </div>
               </div>
 
-              {/* Right side - Pricing */}
-              <div className="md:w-72 bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl p-6 border border-amber-500/30 text-center">
-                <p className="text-slate-400 text-sm mb-2">Monthly Investment</p>
-                <div className="flex items-baseline justify-center gap-1 mb-1">
-                  <span className="text-5xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">$37</span>
-                  <span className="text-slate-400">/month</span>
-                </div>
-                <p className="text-emerald-400 text-sm mb-6">Cancel anytime</p>
-                
-                <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:via-orange-400 hover:to-rose-400 shadow-xl shadow-orange-500/30">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Upgrade to Unlimited
-                </Button>
-                
-                <p className="text-xs text-slate-500 mt-4">
-                  🔒 Secure payment • Instant access
-                </p>
+              {/* Right side */}
+              <div className={cn(
+                "md:w-72 bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl p-6 border text-center",
+                isFullyUnlocked ? "border-emerald-500/40" : "border-amber-500/30"
+              )}>
+                {isFullyUnlocked ? (
+                  <>
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                      <Crown className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-1">Active Plan</h4>
+                    <p className="text-emerald-400 text-sm mb-4">All features are unlocked</p>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-sm px-4 py-1.5">
+                      <Check className="w-4 h-4 mr-1" />
+                      {planInfo.label}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-slate-400 text-sm mb-2">Monthly Investment</p>
+                    <div className="flex items-baseline justify-center gap-1 mb-1">
+                      <span className="text-5xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">$37</span>
+                      <span className="text-slate-400">/month</span>
+                    </div>
+                    <p className="text-emerald-400 text-sm mb-6">Cancel anytime</p>
+                    <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:via-orange-400 hover:to-rose-400 shadow-xl shadow-orange-500/30">
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Upgrade to Unlimited
+                    </Button>
+                    <p className="text-xs text-slate-500 mt-4">
+                      🔒 Secure payment • Instant access
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -361,7 +415,8 @@ export default function Billing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {Object.values(addonDefinitions).filter(a => a.key !== 'unlimited').map((addon, idx) => {
             const Icon = addon.icon;
-            const isActive = addon.apiKeys.some(k => addons[k] === true);
+            // ALLACCESS/UNLIMITED plans = everything active
+            const isActive = isFullyUnlocked || addon.apiKeys.some(k => addons[k] === true);
 
             return (
               <motion.div
@@ -375,22 +430,18 @@ export default function Billing() {
                   "absolute inset-0 rounded-2xl bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
                   addon.color
                 )} style={{ filter: 'blur(40px)' }} />
-                
+
                 <div className={cn(
                   "relative rounded-2xl border overflow-hidden transition-all duration-300",
-                  isActive 
-                    ? "bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-emerald-500/50" 
+                  isActive
+                    ? "bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-emerald-500/50"
                     : "bg-slate-900/80 border-slate-700/50 hover:border-slate-600/50"
                 )}>
                   {/* Header */}
-                  <div className={cn(
-                    "p-5 bg-gradient-to-r",
-                    addon.color,
-                    "bg-opacity-10"
-                  )}>
+                  <div className={cn("p-5 bg-gradient-to-r bg-opacity-10", addon.color)}>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
-                        <motion.div 
+                        <motion.div
                           whileHover={{ scale: 1.1, rotate: 5 }}
                           className={cn(
                             "w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-lg",
@@ -435,10 +486,7 @@ export default function Billing() {
                         Already Owned
                       </Button>
                     ) : (
-                      <Button className={cn(
-                        "w-full bg-gradient-to-r group/btn",
-                        addon.color
-                      )}>
+                      <Button className={cn("w-full bg-gradient-to-r group/btn", addon.color)}>
                         <span>Get {addon.name}</span>
                         <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                       </Button>

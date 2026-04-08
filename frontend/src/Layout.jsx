@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Mic, Music2, Video, Users,
   Sparkles, HelpCircle, LogOut, Menu, X, ChevronDown,
-  PenTool, Loader2, BookOpen,
+  PenTool, Loader2, BookOpen, Briefcase,
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,15 @@ const navItems = [
       { name: 'My Audiobooks',    page: 'AudiobookList',    emoji: '📚' },
     ],
   },
+  {
+    name: 'Freelance Hub',
+    icon: Briefcase,
+    emoji: '💼',
+    children: [
+      { name: 'Job Finder',   page: 'JobFinder',   emoji: '🔍' },
+      { name: 'Gig Creator',  page: 'GigCreator',  emoji: '✨' },
+    ],
+  },
   { name: 'Transcribe', icon: Video,          page: 'Transcribe', emoji: '🎥' },
   { name: 'Agency',     icon: Users,          page: 'Agency',     emoji: '🏢' },
   { name: 'Billing',    icon: LayoutDashboard, page: 'Billing',   emoji: '💳' },
@@ -95,6 +105,37 @@ const NavCtx = createContext(null);
 
 // ─── NavItem ──────────────────────────────────────────────────────────────────
 // Defined OUTSIDE Layout so React never remounts it on state changes.
+
+const EXTERNAL_ADDONS = [
+  { key: 'ailogosuit',      name: 'AI Logo Suite',       emoji: '🎨', url: 'https://ailogosuite.app/' },
+  { key: 'viralinfluencer', name: 'Viral Influencer AI', emoji: '📱', url: 'https://app.viralinfluencerai.com/' },
+  { key: 'cleveraistudio',  name: 'Clever AI Studio',    emoji: '🎬', url: 'https://app.cleveraistudio.com/login' },
+];
+
+function ExternalAddonItem({ addon, enabled }) {
+  const { sidebarOpen } = useContext(NavCtx);
+
+  const handleClick = () => {
+    if (enabled) {
+      window.open(addon.url, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.error(`Subscribe to ${addon.name} to access this feature.`);
+    }
+  };
+
+  return (
+    <motion.div
+      whileHover={{ x: 4 }}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={handleClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer
+        ${enabled ? 'text-slate-200 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-slate-400 hover:bg-white/5'}`}
+    >
+      <span className={`text-lg ${!enabled ? 'opacity-50' : ''}`}>{addon.emoji}</span>
+      {sidebarOpen && <span className="flex-1">{addon.name}</span>}
+    </motion.div>
+  );
+}
 
 function NavItem({ item }) {
   const { expandedMenus, isActive, toggleExpanded, sidebarOpen, hasAgency } = useContext(NavCtx);
@@ -200,12 +241,18 @@ function NavItem({ item }) {
 // Also outside Layout for the same stability reason.
 
 function Sidebar({ mobile = false }) {
-  const { sidebarOpen } = useContext(NavCtx);
+  const { sidebarOpen, addonsObj, plan } = useContext(NavCtx);
+
+  const isAddonEnabled = (key) => {
+    // ALLACCESS plan unlocks everything
+    if (plan === 'ALLACCESS') return true;
+    return addonsObj[key] === true || addonsObj[key?.toUpperCase()] === true;
+  };
 
   return (
     <div className={`flex flex-col h-full bg-slate-900/95 backdrop-blur-xl ${mobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} transition-all duration-300`}>
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-slate-800/50 flex items-center justify-center">
+      <div className="px-4 py-5 border-b border-slate-800/50 flex items-center justify-start">
         <img
           src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
           alt="AI Talker"
@@ -217,6 +264,17 @@ function Sidebar({ mobile = false }) {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
         {navItems.map(item => (
           <NavItem key={item.name} item={item} />
+        ))}
+
+        {/* External addon links — always visible */}
+        <div className="pt-2 pb-1 px-3">
+          <div className="h-px bg-slate-700/50" />
+          {sidebarOpen && (
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-2 mb-1">Your Add-ons</p>
+          )}
+        </div>
+        {EXTERNAL_ADDONS.map(addon => (
+          <ExternalAddonItem key={addon.key} addon={addon} enabled={isAddonEnabled(addon.key)} />
         ))}
       </nav>
 
@@ -250,8 +308,24 @@ export default function Layout({ children, currentPageName }) {
   // because that component is mounted twice (mobile + desktop) which would open two sockets.
   useNotificationSocket();
 
-  const addonsObj = (user?.addons && typeof user.addons === 'object' && !Array.isArray(user.addons)) ? user.addons : {};
-  const hasAgency = addonsObj?.AGENCY === true || addonsObj?.agency === true;
+  // Use TanStack Query so plan/addons are available as soon as cache is populated
+  // (shared ['currentUser'] key means any page's query fills this instantly)
+  // Disabled on public pages (SignIn) to avoid 401 → redirect loop
+  const isPublicPage = PUBLIC_PAGES.includes(currentPageName);
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 5 * 60 * 1000,
+    enabled: !isPublicPage && !!localStorage.getItem('auth_token'),
+  });
+
+  // Prefer TanStack Query result (fresher / cached); fall back to AuthContext user
+  const resolvedUser = currentUser || user;
+  const addonsObj = (resolvedUser?.addons && typeof resolvedUser.addons === 'object' && !Array.isArray(resolvedUser.addons)) ? resolvedUser.addons : {};
+  const plan      = (resolvedUser?.base_plan || '').toUpperCase();
+  // Only block Billing for agency SUB-users (agency_owner_id set = managed account)
+  // Admins who have the AGENCY addon or ALLACCESS plan should still access Billing normally
+  const hasAgency = !!resolvedUser?.agency_owner_id;
 
   const isActive = useCallback((page) => {
     return currentPageName === page || location.pathname === createPageUrl(page);
@@ -285,7 +359,9 @@ export default function Layout({ children, currentPageName }) {
     toggleExpanded,
     sidebarOpen,
     hasAgency,
-  }), [expandedMenus, isActive, toggleExpanded, sidebarOpen, hasAgency]);
+    addonsObj,
+    plan,
+  }), [expandedMenus, isActive, toggleExpanded, sidebarOpen, hasAgency, addonsObj, plan]);
 
   useEffect(() => {
     if (PUBLIC_PAGES.includes(currentPageName)) {

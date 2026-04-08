@@ -8,15 +8,15 @@ const FALLBACK_LIMITS = {
   ad: 15,
   custom: 2,
   transcriptions: 10,
+  brand_studio: 5,
+  conversational: 5,
+  audio_mix: 10,
+  audiobook: 5,
 };
 
-/**
- * Returns `checkLimit(feature)` → { allowed: bool, used: number, limit: number }
- *
- * Uses the same query keys as Dashboard so the cache is shared.
- * Feature pages that call `invalidateQueries({ queryKey: ['monthlyUsage'] })`
- * also invalidate this hook's usage query (prefix match in TanStack Query v5).
- */
+// -1 in plan_limits means unlimited — always allowed, no cap
+const isUnlimited = (val) => val === -1 || val === null;
+
 export function useUsageLimits() {
   const currentMonthYear = new Date().toISOString().slice(0, 7);
 
@@ -42,30 +42,47 @@ export function useUsageLimits() {
   });
 
   const limits = planLimitsData?.[0] ?? FALLBACK_LIMITS;
-  const usage = monthlyUsageData?.[0] ?? {};
+  const usage  = monthlyUsageData?.[0] ?? {};
 
-  // Add-on holders get a high fixed limit (1000) instead of their plan's default
-  const ADDON_LIMIT = 1000;
   const addons = currentUser?.addons ?? {};
+  const plan   = (currentUser?.base_plan || '').toUpperCase();
 
-  const hasAddonTranscriptions = addons.transcribe === true || addons.TRANSCRIBE === true;
-  const hasAddonVSL            = addons.vsl === true || addons.VSL === true;
-  const hasAddonAdCopy         = addons.adcopy === true || addons.ADCOPY === true || addons.ad_copy === true;
+  // ALLACCESS plan or UNLIMITED plan — everything is unlimited
+  const isAllAccess = plan === 'ALLACCESS';
+  const isUnlimitedPlan = plan === 'UNLIMITED';
+
+  // Add-on overrides — bump to a high cap
+  const ADDON_LIMIT = 1000;
+  const hasAddonTranscriptions = addons.transcribe    === true || addons.TRANSCRIBE    === true;
+  const hasAddonVSL            = addons.vsl           === true || addons.VSL           === true;
+  const hasAddonAdCopy         = addons.ad            === true || addons.AD            === true
+                               || addons.adcopy       === true || addons.ADCOPY        === true;
 
   const checkLimit = (feature) => {
+    // ALLACCESS — fully unlimited on everything
+    if (isAllAccess) return { allowed: true, used: usage[`${feature}_used`] ?? 0, limit: -1 };
+
     const map = {
-      clones:         { used: usage.clones_used ?? 0,         limit: limits.clones },
-      vsl:            { used: usage.vsl_used ?? 0,            limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
-      ad:             { used: usage.ad_used ?? 0,             limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
-      custom:         { used: usage.custom_used ?? 0,         limit: limits.custom },
+      clones:         { used: usage.clones_used         ?? 0, limit: limits.clones },
+      vsl:            { used: usage.vsl_used            ?? 0, limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
+      ad:             { used: usage.ad_used             ?? 0, limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
+      custom:         { used: usage.custom_used         ?? 0, limit: limits.custom },
       transcriptions: { used: usage.transcriptions_used ?? 0, limit: hasAddonTranscriptions ? ADDON_LIMIT : limits.transcriptions },
-      credits:        { used: usage.credits_used ?? 0,        limit: limits.credits },
+      credits:        { used: usage.credits_used        ?? 0, limit: limits.credits },
+      brand_studio:   { used: usage.brand_studio_used   ?? 0, limit: limits.brand_studio },
+      conversational: { used: usage.conversational_used ?? 0, limit: limits.conversational },
+      audio_mix:      { used: usage.audio_mix_used      ?? 0, limit: limits.audio_mix },
+      audiobook:      { used: usage.audiobook_used      ?? 0, limit: limits.audiobook },
     };
+
     const f = map[feature];
-    if (!f) return { allowed: true, used: 0, limit: 999 };
-    if (f.limit === null) return { allowed: true, used: f.used, limit: null };
+    if (!f) return { allowed: true, used: 0, limit: -1 };
+
+    // -1 from plan_limits = unlimited
+    if (isUnlimited(f.limit)) return { allowed: true, used: f.used, limit: -1 };
+
     return { allowed: f.used < f.limit, used: f.used, limit: f.limit };
   };
 
-  return { checkLimit };
+  return { checkLimit, isAllAccess, isUnlimitedPlan };
 }

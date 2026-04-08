@@ -286,7 +286,7 @@ Use the above scraped content to write highly relevant, specific, and compelling
         gradient="from-rose-500 to-pink-500"
       />
 
-      <AddonUpgradeCard type="vsl" addons={currentUser?.addons} />
+      <AddonUpgradeCard type="vsl" addons={currentUser?.addons} currentPlan={currentUser?.base_plan} />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

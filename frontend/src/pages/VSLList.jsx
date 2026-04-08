@@ -71,7 +71,7 @@ export default function VSLList() {
         }
       />
 
-      <AddonUpgradeCard type="vsl" addons={currentUser?.addons} />
+      <AddonUpgradeCard type="vsl" addons={currentUser?.addons} currentPlan={currentUser?.base_plan} />
 
       {/* Search */}
       <GlassCard className="p-4" hover={false}>

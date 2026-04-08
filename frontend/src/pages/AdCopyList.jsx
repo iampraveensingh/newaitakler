@@ -78,7 +78,7 @@ export default function AdCopyList() {
         }
       />
 
-      <AddonUpgradeCard type="adcopy" addons={currentUser?.addons} />
+      <AddonUpgradeCard type="adcopy" addons={currentUser?.addons} currentPlan={currentUser?.base_plan} />
 
       <GlassCard className="p-4" hover={false}>
         <div className="relative">

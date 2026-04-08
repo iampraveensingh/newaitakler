@@ -217,8 +217,11 @@ export default function Agency() {
     return a || {};
   })();
 
-  const hasAgency = addons?.AGENCY === true || addons?.agency === true;
-  const isAdmin = currentUser?.role === 'admin';
+  const plan       = (currentUser?.base_plan || '').toUpperCase();
+  const isAllAccess = plan === 'ALLACCESS';
+  // ALLACCESS plan = everything unlocked, including agency features
+  const hasAgency  = isAllAccess || addons?.AGENCY === true || addons?.agency === true;
+  const isAdmin    = currentUser?.role === 'admin';
 
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['agencyStats'],

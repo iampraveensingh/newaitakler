@@ -51,11 +51,16 @@ export default function UpgradeCard({ compact = false, currentPlan, addons, isAg
   const hasAgency    = addonsObj?.AGENCY    === true || addonsObj?.agency    === true;
   const hasUnlimited = addonsObj?.UNLIMITED === true || addonsObj?.unlimited === true;
   const plan         = (currentPlan || '').toUpperCase();
-  const hasPro       = plan === 'PRO';
+  const hasPro       = plan === 'PRO' || plan === 'XTREME';
+  const isAllAccess  = plan === 'ALLACCESS';
+  const isUnlimited  = plan === 'UNLIMITED';
 
-  // Truly all unlocked: must have PRO plan AND (Agency or Unlimited addon)
-  // Without PRO, addons alone are not sufficient — show the PRO upgrade card
-  if (hasPro && (hasAgency || hasUnlimited)) {
+  // ALLACCESS / UNLIMITED plans — or PRO/XTREME with Agency or Unlimited addon
+  const isFullyUnlocked = isAllAccess || isUnlimited || (hasPro && (hasAgency || hasUnlimited));
+
+  const planBadge = isAllAccess ? 'ALL ACCESS' : isUnlimited ? 'UNLIMITED' : hasAgency ? 'AGENCY' : 'UNLIMITED';
+
+  if (isFullyUnlocked) {
     return (
       <GlassCard
         className="p-6 bg-gradient-to-br from-emerald-900/40 via-teal-900/30 to-cyan-900/20 border-emerald-500/30 relative overflow-hidden"
@@ -70,7 +75,7 @@ export default function UpgradeCard({ compact = false, currentPlan, addons, isAg
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xl font-bold text-white">All Features Unlocked</h3>
               <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full">
-                {hasAgency ? 'AGENCY' : 'UNLIMITED'}
+                {planBadge}
               </span>
             </div>
             <p className="text-slate-400 mt-1">You have full access to all features!</p>

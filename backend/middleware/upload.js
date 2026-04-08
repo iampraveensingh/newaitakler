@@ -26,8 +26,11 @@ const fileFilter = (req, file, cb) => {
     'video/mp4', 'video/quicktime', 'video/x-msvideo',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
+    'text/plain',
+    'application/epub+zip',
+    'application/epub',
   ];
-  if (allowed.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+  if (allowed.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/') || file.mimetype.startsWith('text/')) {
     cb(null, true);
   } else {
     cb(new Error(`Unsupported file type: ${file.mimetype}`), false);

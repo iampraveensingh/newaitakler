@@ -148,14 +148,15 @@ export const login = async (req, res) => {
     }
     console.log('[AUTH] Step 5 — Selected basePlan:', basePlan, '(priority:', highestPriority + ')');
 
-    // Login requires FE or XTREME. PRO alone is not sufficient.
-    const hasBaseAccess = loginPlans.some(e => e.code === 'FE' || e.code === 'XTREME');
+    // Any recognized LOGIN_PLAN grants access
+    const ACCESS_PLANS = ['FE', 'XTREME', 'PRO', 'UNLIMITED', 'ALLACCESS'];
+    const hasBaseAccess = loginPlans.some(e => ACCESS_PLANS.includes((e.code || '').toUpperCase()));
     if (loginPlans.length > 0 && !hasBaseAccess) {
-      return errorResponse(res, 'Access requires the FE or XTREME product. A PRO subscription alone does not grant access. Please contact support.', 403);
+      return errorResponse(res, 'Your product does not grant access. Please contact support.', 403);
     }
 
     if (basePlan === 'NONE') {
-      return errorResponse(res, 'No access plan found on your account. Please purchase the FE or XTREME product to continue.', 403);
+      return errorResponse(res, 'No access plan found on your account. Please contact support.', 403);
     }
 
     // Step 6: Build addons object
@@ -172,7 +173,8 @@ export const login = async (req, res) => {
       // If plan changed to a higher tier, top up credits_balance to the new plan's limit
       const [[existingUser]] = await db.query('SELECT base_plan, credits_balance FROM users WHERE id = ?', [userId]);
       const [[planLimitRow]] = await db.query('SELECT credits FROM plan_limits WHERE plan_id = ?', [basePlan]);
-      const planCredits = planLimitRow?.credits || 1000;
+      const planCredits = planLimitRow?.credits ?? 1000;
+      // -1 means unlimited — store as -1 in credits_balance as sentinel
       // Only top up if credits_balance is 0 (new/depleted) or plan upgraded
       const creditsUpdate = (existingUser.credits_balance === 0 || existingUser.base_plan !== basePlan)
         ? `, credits_balance = ${planCredits}` : '';
@@ -188,7 +190,8 @@ export const login = async (req, res) => {
       const [[planLimitRow]] = await db.query(
         'SELECT credits FROM plan_limits WHERE plan_id = ?', [basePlan]
       );
-      const initialCredits = planLimitRow?.credits || 1000;
+      // -1 means unlimited — keep as -1
+      const initialCredits = planLimitRow?.credits ?? 1000;
 
       const [insertResult] = await db.query(
         `INSERT INTO users (username, email, full_name, role, base_plan, addons, billing_product_ids,

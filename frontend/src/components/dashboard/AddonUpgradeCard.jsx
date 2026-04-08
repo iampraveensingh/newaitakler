@@ -13,7 +13,7 @@ const addonConfig = {
     gradient: 'from-violet-500 to-purple-500',
     bgGradient: 'from-violet-900/40 via-purple-900/30 to-fuchsia-900/20',
     borderColor: 'border-violet-500/30',
-    addonKey: 'brand_studio',
+    addonKeys: ['brand_studio', 'BRAND_STUDIO'],
     benefits: [
       'Brand voice profiles',
       'Multi-script projects',
@@ -28,7 +28,7 @@ const addonConfig = {
     gradient: 'from-rose-500 to-pink-500',
     bgGradient: 'from-rose-900/40 via-pink-900/30 to-fuchsia-900/20',
     borderColor: 'border-rose-500/30',
-    addonKey: 'vsl',
+    addonKeys: ['vsl', 'VSL'],
     benefits: [
       'Unlimited VSL scripts',
       'Advanced frameworks',
@@ -43,7 +43,8 @@ const addonConfig = {
     gradient: 'from-indigo-500 to-blue-500',
     bgGradient: 'from-indigo-900/40 via-blue-900/30 to-cyan-900/20',
     borderColor: 'border-indigo-500/30',
-    addonKey: 'adcopy',
+    // product_entitlements uses 'ad' as the code, also check 'adcopy' variants
+    addonKeys: ['ad', 'AD', 'adcopy', 'ADCOPY'],
     benefits: [
       'Unlimited ad copies',
       'All platforms supported',
@@ -58,7 +59,8 @@ const addonConfig = {
     gradient: 'from-emerald-500 to-teal-500',
     bgGradient: 'from-emerald-900/40 via-teal-900/30 to-cyan-900/20',
     borderColor: 'border-emerald-500/30',
-    addonKey: 'transcriber',
+    // product_entitlements uses 'transcribe' as the code
+    addonKeys: ['transcribe', 'TRANSCRIBE', 'transcriber', 'TRANSCRIBER'],
     benefits: [
       'Unlimited transcriptions',
       'All output formats',
@@ -73,7 +75,7 @@ const addonConfig = {
     gradient: 'from-fuchsia-500 to-pink-500',
     bgGradient: 'from-fuchsia-900/40 via-pink-900/30 to-rose-900/20',
     borderColor: 'border-fuchsia-500/30',
-    addonKey: 'conversational',
+    addonKeys: ['conversational', 'CONVERSATIONAL'],
     benefits: [
       'Multi-speaker audio',
       'Natural dialogues',
@@ -88,7 +90,7 @@ const addonConfig = {
     gradient: 'from-amber-500 to-orange-500',
     bgGradient: 'from-amber-900/40 via-orange-900/30 to-red-900/20',
     borderColor: 'border-amber-500/30',
-    addonKey: 'audio_mix',
+    addonKeys: ['audio_mix', 'AUDIO_MIX'],
     benefits: [
       'Voice + music mixing',
       'Volume controls',
@@ -98,12 +100,17 @@ const addonConfig = {
   },
 };
 
-export default function AddonUpgradeCard({ type, addons }) {
+export default function AddonUpgradeCard({ type, addons, currentPlan }) {
   const config = addonConfig[type];
   if (!config) return null;
 
-  const addonsArray = Array.isArray(addons) ? addons : [];
-  const hasAddon = addonsArray.includes(config.addonKey);
+  // ALLACCESS / UNLIMITED plans include everything — no upgrade card needed
+  const plan = (currentPlan || '').toUpperCase();
+  if (plan === 'ALLACCESS' || plan === 'UNLIMITED') return null;
+
+  // addons is an object like { vsl: true, ad: true }
+  const addonsObj = (addons && typeof addons === 'object' && !Array.isArray(addons)) ? addons : {};
+  const hasAddon = config.addonKeys.some(k => addonsObj[k] === true);
 
   if (hasAddon) return null;
 

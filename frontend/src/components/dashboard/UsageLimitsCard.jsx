@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Zap, Copy, FileText, PenTool, Video, Sparkles, MessageSquare, Music2, Layers } from 'lucide-react';
+import { Zap, Copy, FileText, PenTool, Video, Sparkles, MessageSquare, Music2, Layers, BookOpen } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,7 @@ const usageItemsConfig = [
   { key: 'transcriptions',label: 'Transcriptions', icon: Video,        color: 'cyan'    },
   { key: 'conversational',label: 'Conversational', icon: MessageSquare,color: 'indigo'  },
   { key: 'audio_mix',     label: 'Audio Mixes',    icon: Music2,       color: 'rose'    },
+  { key: 'audiobook',     label: 'Audiobooks',     icon: BookOpen,     color: 'teal'    },
 ];
 
 const colorMap = {
@@ -23,6 +24,7 @@ const colorMap = {
   cyan:   { bar: 'bg-cyan-500',   bg: 'bg-cyan-500/20',   text: 'text-cyan-400'   },
   indigo: { bar: 'bg-indigo-500', bg: 'bg-indigo-500/20', text: 'text-indigo-400' },
   rose:   { bar: 'bg-rose-500',   bg: 'bg-rose-500/20',   text: 'text-rose-400'   },
+  teal:   { bar: 'bg-teal-500',   bg: 'bg-teal-500/20',   text: 'text-teal-400'   },
 };
 
 export default function UsageLimitsCard({ counts = {} }) {
@@ -43,11 +45,12 @@ export default function UsageLimitsCard({ counts = {} }) {
 
       <div className="space-y-4">
         {items.map((item, idx) => {
-          const Icon       = item.icon;
-          const colors     = colorMap[item.color];
-          const percentage = Math.min((item.used / item.limit) * 100, 100);
-          const isNearLimit = percentage >= 80;
-          const isAtLimit   = percentage >= 100;
+          const Icon      = item.icon;
+          const colors    = colorMap[item.color];
+          const unlimited = item.limit === -1 || item.limit === null;
+          const percentage = unlimited ? 0 : Math.min((item.used / item.limit) * 100, 100);
+          const isNearLimit = !unlimited && percentage >= 80;
+          const isAtLimit   = !unlimited && percentage >= 100;
 
           return (
             <motion.div
@@ -64,19 +67,19 @@ export default function UsageLimitsCard({ counts = {} }) {
                 </div>
                 <span className={cn(
                   'text-sm font-medium',
-                  isAtLimit ? 'text-red-400' : isNearLimit ? 'text-amber-400' : 'text-slate-400'
+                  isAtLimit ? 'text-red-400' : isNearLimit ? 'text-amber-400' : unlimited ? 'text-emerald-400' : 'text-slate-400'
                 )}>
-                  {item.used} / {item.limit}
+                  {unlimited ? `${item.used} / ∞` : `${item.used} / ${item.limit}`}
                 </span>
               </div>
-              <div className={cn('h-2 rounded-full overflow-hidden', colors.bg)}>
+              <div className={cn('h-2 rounded-full overflow-hidden', unlimited ? 'bg-emerald-500/20' : colors.bg)}>
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${percentage}%` }}
+                  animate={{ width: unlimited ? '100%' : `${percentage}%` }}
                   transition={{ duration: 0.5, delay: idx * 0.05 }}
                   className={cn(
                     'h-full rounded-full',
-                    isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : colors.bar
+                    unlimited ? 'bg-emerald-500/50' : isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-amber-500' : colors.bar
                   )}
                 />
               </div>

@@ -25,6 +25,7 @@ import backgroundMusicRoutes from './routes/backgroundMusic.js';
 import voiceCloneRoutes from './routes/voiceClones.js';
 import notificationRoutes from './routes/notifications.js';
 import systemVoicesRoutes from './routes/systemVoices.js';
+import jobsRoutes from './routes/jobs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -102,6 +103,7 @@ app.use('/api/plan-limits',       planRoutes);
 app.use('/api/usage-monthly',     usageRouter);
 app.use('/api/dfy-offers',        dfyOffersRouter);
 app.use('/api/agency',            agencyRoutes);
+app.use('/api/jobs',              jobsRoutes);
 app.use('/api/scrape',            scrapeRoutes);
 app.use('/api/extract-script',   extractScriptRoutes);
 app.use('/api/background-music',  backgroundMusicRoutes);

@@ -44,6 +44,7 @@ const FEATURE_COLUMNS = {
   brand_studio:   'brand_studio_used',
   conversational: 'conversational_used',
   audio_mix:      'audio_mix_used',
+  audiobook:      'audiobook_used',
 };
 
 export const trackUsage = async (req, res) => {
