@@ -22,11 +22,23 @@ export default function Dashboard() {
     queryFn: () => base44.auth.me()
   });
 
-  // Fetch plan limits based on user's base_plan
+  const addonsRaw         = currentUser?.addons ?? {};
+  const hasAllAccessAddon = addonsRaw.ALLACCESS === true || addonsRaw.allaccess === true;
+  const hasUnlimitedAddon = addonsRaw.UNLIMITED === true || addonsRaw.unlimited === true;
+  const basePlanUpper     = (currentUser?.base_plan || '').toUpperCase();
+  // Priority: ALLACCESS addon > BUNDLE plan > UNLIMITED addon > base plan
+  const effectivePlan     = hasAllAccessAddon
+    ? 'ALLACCESS'
+    : basePlanUpper === 'BUNDLE'
+      ? 'BUNDLE'
+      : hasUnlimitedAddon
+        ? 'UNLIMITED'
+        : currentUser?.base_plan;
+
   const { data: planLimits } = useQuery({
-    queryKey: ['planLimits', currentUser?.base_plan],
-    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: currentUser?.base_plan }),
-    enabled: !!currentUser?.base_plan
+    queryKey: ['planLimits', effectivePlan],
+    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: effectivePlan }),
+    enabled: !!effectivePlan
   });
 
   // Fetch current month usage
@@ -103,38 +115,38 @@ export default function Dashboard() {
   // Agency sub-users have a personal credit allocation instead of a plan-level limit
   const isAgencySubUser = !!currentUser?.agency_owner_id;
 
-  const ADDON_LIMIT = 1000;
-  const addons = currentUser?.addons ?? {};
-  const plan   = (currentUser?.base_plan || '').toUpperCase();
+  const plan = (effectivePlan || '').toUpperCase();
 
-  // ALLACCESS — everything unlimited
-  const isAllAccess     = plan === 'ALLACCESS';
+  // BUNDLE/ALLACCESS — fully unlimited, no plan_limits check needed
+  const isBundle       = plan === 'BUNDLE' || plan === 'ALLACCESS';
   // -1 in plan_limits means unlimited
-  const unlimitedLimit  = (val) => (val === -1 || val === null) ? -1 : val;
+  const unlimitedLimit = (val) => (val === -1 || val === null) ? -1 : val;
 
-  const hasAddonTranscriptions = addons.transcribe === true || addons.TRANSCRIBE === true;
-  const hasAddonVSL            = addons.vsl    === true || addons.VSL    === true;
-  const hasAddonAdCopy         = addons.ad     === true || addons.AD     === true
-                               || addons.adcopy === true || addons.ADCOPY === true;
+  // Feature-specific addon flags
+  const addonsRaw2        = currentUser?.addons ?? {};
+  const hasAddonVSL         = addonsRaw2.vsl          === true || addonsRaw2.VSL          === true;
+  const hasAddonAd          = addonsRaw2.ad            === true || addonsRaw2.AD            === true;
+  const hasAddonVoiceCloner = addonsRaw2.voicecloner   === true || addonsRaw2.VOICECLONER   === true;
+  const hasAddonTranscribe  = addonsRaw2.transcribe    === true || addonsRaw2.TRANSCRIBE    === true;
 
-  const lim = (planVal, addonOverride) => {
-    if (isAllAccess) return -1;
-    if (addonOverride) return ADDON_LIMIT;
+  const addonLim = (addonActive, planVal) => {
+    if (isBundle) return -1;
+    if (addonActive) return -1;
     return unlimitedLimit(planVal);
   };
 
   // Build usage data for cards
   const usageCounts = {
-    credits:        { used: usage.credits_used,         limit: isAllAccess ? -1 : unlimitedLimit(currentUser?.credits_balance ?? limits.credits) },
-    clones:         { used: usage.clones_used,          limit: lim(limits.clones) },
-    brand_studio:   { used: usage.brand_studio_used,    limit: lim(limits.brand_studio) },
-    vsl:            { used: usage.vsl_used,             limit: lim(limits.vsl, hasAddonVSL) },
-    adcopy:         { used: usage.ad_used,              limit: lim(limits.ad, hasAddonAdCopy) },
-    customvoice:    { used: usage.custom_used,          limit: lim(limits.custom) },
-    transcriptions: { used: usage.transcriptions_used,  limit: lim(limits.transcriptions, hasAddonTranscriptions) },
-    conversational: { used: usage.conversational_used,  limit: lim(limits.conversational) },
-    audio_mix:      { used: usage.audio_mix_used,       limit: lim(limits.audio_mix) },
-    audiobook:      { used: usage.audiobook_used,       limit: lim(limits.audiobook) },
+    credits:        { used: usage.credits_used,         limit: isBundle ? -1 : unlimitedLimit(limits.credits) },
+    clones:         { used: usage.clones_used,          limit: addonLim(hasAddonVoiceCloner, limits.clones) },
+    brand_studio:   { used: usage.brand_studio_used,    limit: isBundle ? -1 : unlimitedLimit(limits.brand_studio) },
+    vsl:            { used: usage.vsl_used,             limit: addonLim(hasAddonVSL, limits.vsl) },
+    adcopy:         { used: usage.ad_used,              limit: addonLim(hasAddonAd, limits.ad) },
+    customvoice:    { used: usage.custom_used,          limit: isBundle ? -1 : unlimitedLimit(limits.custom) },
+    transcriptions: { used: usage.transcriptions_used,  limit: addonLim(hasAddonTranscribe, limits.transcriptions) },
+    conversational: { used: usage.conversational_used,  limit: isBundle ? -1 : unlimitedLimit(limits.conversational) },
+    audio_mix:      { used: usage.audio_mix_used,       limit: isBundle ? -1 : unlimitedLimit(limits.audio_mix) },
+    audiobook:      { used: usage.audiobook_used,       limit: isBundle ? -1 : unlimitedLimit(limits.audiobook) },
   };
 
   // Combine recent projects
@@ -163,10 +175,10 @@ export default function Dashboard() {
 
       {/* Credits & Usage Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CreditsCard 
-          creditsUsed={usageCounts.credits.used} 
+        <CreditsCard
+          creditsUsed={usageCounts.credits.used}
           creditsLimit={usageCounts.credits.limit}
-          planName={currentUser?.base_plan}
+          planName={plan}
         />
         <UsageLimitsCard counts={usageCounts} />
         <UpgradeCard currentPlan={currentUser?.base_plan} addons={currentUser?.addons} isAgencySubUser={isAgencySubUser} />

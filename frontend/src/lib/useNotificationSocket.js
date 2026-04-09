@@ -1,11 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-const WS_BASE = import.meta.env.VITE_WS_URL ||
-  (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
-  (import.meta.env.VITE_API_BASE_URL
-    ? new URL(import.meta.env.VITE_API_BASE_URL, window.location.origin).host
-    : window.location.hostname + ':5000');
+const WS_BASE = (() => {
+  // Explicit env override takes highest priority
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
+  // If a custom API base URL is set (e.g. http://localhost:5000/api), extract its host
+  if (import.meta.env.VITE_API_BASE_URL) {
+    const host = new URL(import.meta.env.VITE_API_BASE_URL, window.location.origin).host;
+    return protocol + host;
+  }
+
+  // In production (no VITE_API_BASE_URL), the proxy handles /api — use same host/port as the page
+  // so WebSocket goes through nginx on port 443, not directly to :5000
+  return protocol + window.location.host;
+})();
 
 /**
  * Opens a WebSocket connection to /ws and listens for real-time notifications.

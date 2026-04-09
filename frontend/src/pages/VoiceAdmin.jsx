@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { systemVoices as api } from '@/api/base44Client';
+import { systemVoices as api, integrations } from '@/api/base44Client';
 import {
   Plus, Pencil, Trash2, Check, X, ToggleLeft, ToggleRight,
   Loader2, Mic, Search, ChevronUp, ChevronDown, ChevronsUpDown,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter,
+  Link2, Upload, FileAudio,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,9 +42,13 @@ export default function VoiceAdmin() {
   const queryClient = useQueryClient();
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [showForm, setShowForm] = useState(false);
-  const [editId,   setEditId]   = useState(null);
-  const [form,     setForm]     = useState(EMPTY_FORM);
+  const [showForm,     setShowForm]     = useState(false);
+  const [editId,       setEditId]       = useState(null);
+  const [form,         setForm]         = useState(EMPTY_FORM);
+  const [audioTab,     setAudioTab]     = useState('url');   // 'url' | 'upload'
+  const [uploadFile,   setUploadFile]   = useState(null);
+  const [uploading,    setUploading]    = useState(false);
+  const fileInputRef = useRef(null);
 
   // ── Datatable state ─────────────────────────────────────────────────────────
   const [search,   setSearch]   = useState('');
@@ -90,19 +95,52 @@ export default function VoiceAdmin() {
   });
 
   // ── Form helpers ────────────────────────────────────────────────────────────
-  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setShowForm(false); };
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditId(null);
+    setShowForm(false);
+    setAudioTab('url');
+    setUploadFile(null);
+  };
 
   const handleEdit = (v) => {
     setForm({ name: v.name, type: v.type, description: v.description || '', audio_url: v.audio_url || '', sort_order: v.sort_order ?? 0 });
     setEditId(v.id);
+    setAudioTab('url');
+    setUploadFile(null);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadFile(file);
+    // Clear manual URL when a file is chosen
+    setForm(p => ({ ...p, audio_url: '' }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required'); return; }
-    const payload = { ...form, sort_order: parseInt(form.sort_order) || 0 };
+
+    let audioUrl = form.audio_url;
+
+    // Upload the file first if one was selected
+    if (audioTab === 'upload' && uploadFile) {
+      setUploading(true);
+      try {
+        const result = await integrations.Core.UploadFile({ file: uploadFile, track: false });
+        audioUrl = result.file_url;
+      } catch {
+        toast.error('File upload failed. Please try again.');
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    const payload = { ...form, audio_url: audioUrl, sort_order: parseInt(form.sort_order) || 0 };
     if (editId) updateMutation.mutate({ id: editId, payload });
     else        createMutation.mutate(payload);
   };
@@ -198,14 +236,90 @@ export default function VoiceAdmin() {
                 className="mt-1 bg-slate-800/50 border-slate-700 text-white" />
             </div>
             <div className="sm:col-span-2">
-              <Label className="text-slate-300">Audio URL</Label>
-              <Input value={form.audio_url} onChange={e => setForm(p => ({ ...p, audio_url: e.target.value }))}
-                placeholder="https://..." className="mt-1 bg-slate-800/50 border-slate-700 text-white" />
+              <Label className="text-slate-300 mb-2 block">Audio</Label>
+
+              {/* Tab switcher */}
+              <div className="flex rounded-lg bg-slate-800/60 border border-slate-700/50 p-0.5 mb-3 w-fit">
+                <button
+                  type="button"
+                  onClick={() => { setAudioTab('url'); setUploadFile(null); }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                    audioTab === 'url'
+                      ? 'bg-violet-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  )}
+                >
+                  <Link2 className="w-3.5 h-3.5" /> URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAudioTab('upload'); setForm(p => ({ ...p, audio_url: '' })); }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                    audioTab === 'upload'
+                      ? 'bg-violet-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  )}
+                >
+                  <Upload className="w-3.5 h-3.5" /> Upload
+                </button>
+              </div>
+
+              {audioTab === 'url' ? (
+                <Input
+                  value={form.audio_url}
+                  onChange={e => setForm(p => ({ ...p, audio_url: e.target.value }))}
+                  placeholder="https://example.com/voice.mp3"
+                  className="bg-slate-800/50 border-slate-700 text-white"
+                />
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                      'w-full flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-6 transition-colors',
+                      uploadFile
+                        ? 'border-violet-500/50 bg-violet-500/5 text-violet-300'
+                        : 'border-slate-700 bg-slate-800/30 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                    )}
+                  >
+                    {uploadFile ? (
+                      <>
+                        <FileAudio className="w-6 h-6 text-violet-400" />
+                        <span className="text-sm font-medium">{uploadFile.name}</span>
+                        <span className="text-xs text-slate-500">{(uploadFile.size / 1024).toFixed(1)} KB — click to change</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6" />
+                        <span className="text-sm">Click to select an audio file</span>
+                        <span className="text-xs">MP3, WAV, OGG, M4A accepted</span>
+                      </>
+                    )}
+                  </button>
+                  {/* Show existing URL if editing */}
+                  {editId && !uploadFile && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Current: <span className="text-violet-400">{form.audio_url || '—'}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
             <div className="sm:col-span-2 flex gap-3">
-              <Button type="submit" disabled={isSaving} className="bg-violet-600 hover:bg-violet-500">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                {editId ? 'Update Voice' : 'Create Voice'}
+              <Button type="submit" disabled={isSaving || uploading} className="bg-violet-600 hover:bg-violet-500">
+                {(isSaving || uploading) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                {uploading ? 'Uploading…' : editId ? 'Update Voice' : 'Create Voice'}
               </Button>
               <Button type="button" variant="outline" onClick={resetForm} className="border-slate-600">
                 <X className="w-4 h-4 mr-2" /> Cancel
@@ -390,6 +504,7 @@ export default function VoiceAdmin() {
           </>
         )}
       </GlassCard>
+
     </div>
   );
 }

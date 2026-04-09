@@ -206,8 +206,10 @@ Use the above scraped content to write highly relevant, specific, and compelling
           }
         }
       });
-      const extractText = (v) =>
-        typeof v === 'string' ? v : (v?.description || v?.text || v?.script || JSON.stringify(v) || '');
+      const extractText = (v) => {
+        const raw = typeof v === 'string' ? v : (v?.description || v?.text || v?.script || JSON.stringify(v) || '');
+        return raw.replace(/\[.*?\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+      };
 
       setGeneratedScript({
         variations: [
@@ -244,8 +246,9 @@ Use the above scraped content to write highly relevant, specific, and compelling
         }
       }
     });
+    const cleaned = (response.script || '').replace(/\[.*?\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
     const newVariations = [...generatedScript.variations];
-    newVariations[index] = response.script;
+    newVariations[index] = cleaned;
     setGeneratedScript({ variations: newVariations });
     setIsGenerating(false);
   };

@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
 import { testConnection } from './config/database.js';
 import { initCronJobs } from './utils/cron.js';
 import { verifyToken } from './middleware/auth.js';
@@ -56,7 +57,7 @@ const voiceoverRoutes = buildEntityRouter('voiceovers', [
 
 const customVoiceRoutes = buildEntityRouter('custom_voices', [
   'name', 'description', 'tone', 'style', 'use_case',
-  'test_script', 'audio_url', 'category', 'status', 'is_favorite', 'is_brand_voice', 'generation_version',
+  'test_script', 'audio_url', 'job_id', 'category', 'status', 'is_favorite', 'is_brand_voice', 'generation_version',
 ]);
 
 const audioMixRoutes = buildEntityRouter('audio_mixes', [
@@ -107,6 +108,95 @@ app.use('/api/jobs',              jobsRoutes);
 app.use('/api/scrape',            scrapeRoutes);
 app.use('/api/extract-script',   extractScriptRoutes);
 app.use('/api/background-music',  backgroundMusicRoutes);
+
+// ── Admin: All User Voices (custom + clones) ─────────────────────────────────
+app.get('/api/admin/user-voices', verifyToken, async (_req, res) => {
+  try {
+    const { db } = await import('./config/database.js');
+    const [rows] = await db.query(`
+      SELECT
+        'custom'        AS voice_type,
+        cv.id,
+        cv.name,
+        cv.description,
+        cv.category     AS sub_type,
+        cv.status,
+        cv.audio_url,
+        cv.created_at,
+        u.username,
+        u.email,
+        u.full_name
+      FROM custom_voices cv
+      JOIN users u ON u.id = cv.user_id
+      UNION ALL
+      SELECT
+        'clone'         AS voice_type,
+        vc.id,
+        vc.name,
+        vc.description,
+        vc.clone_mode   AS sub_type,
+        vc.status,
+        vc.audio_url,
+        vc.created_at,
+        u.username,
+        u.email,
+        u.full_name
+      FROM voice_clones vc
+      JOIN users u ON u.id = vc.user_id
+      ORDER BY created_at DESC
+    `);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Admin user-voices error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch user voices' });
+  }
+});
+
+// ── Custom Voice TTS Generation ───────────────────────────────────────────────
+app.post('/api/custom-voices/generate', verifyToken, async (req, res) => {
+  try {
+    const { description, tone, style, use_case, test_script } = req.body;
+    const promptParts = [description, tone, style, use_case].filter(Boolean);
+    const prompt = promptParts.join(', ');
+
+    const ttsBody = JSON.stringify({
+      api_key: process.env.TTS_API_KEY,
+      mode: 'prompt_voices',
+      "prompt":prompt,
+      tts_text: test_script || '',
+    });
+console.log('Sending TTS API request with body:', ttsBody);
+    const ttsResponse = await axios.post(
+      process.env.TTS_API_URL || 'https://srv16.aisoftllc.com/apis/api.php',
+      ttsBody,
+      { headers: { 'Content-Type': 'text/plain' }, timeout: 60000 }
+    );
+    
+    const result = ttsResponse.data;
+    if (result?.status !== 'success' || !result?.data?.output_url) {
+      return res.status(422).json({
+        success: false,
+        message: result?.message || 'TTS generation failed. Please try again.',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        job_id:     result.data.job_id,
+        output_url: result.data.output_url,
+      },
+    });
+  } catch (error) {
+    console.error('TTS generation error:', error.message);
+    if (error.response) {
+      console.error('TTS API status:', error.response.status);
+      console.error('TTS API response body:', JSON.stringify(error.response.data));
+    }
+    const apiMsg = error.response?.data?.message || error.response?.data?.error;
+    res.status(500).json({ success: false, message: apiMsg || 'Voice generation failed. Please try again.' });
+  }
+});
 
 // Entity routes (all protected)
 app.use('/api/voiceovers',        verifyToken, voiceoverRoutes);

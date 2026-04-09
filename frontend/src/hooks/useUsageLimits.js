@@ -25,10 +25,23 @@ export function useUsageLimits() {
     queryFn: () => base44.auth.me(),
   });
 
+  const addonsRaw       = currentUser?.addons ?? {};
+  const hasAllAccess    = addonsRaw.ALLACCESS  === true || addonsRaw.allaccess  === true;
+  const hasUnlimited    = addonsRaw.UNLIMITED  === true || addonsRaw.unlimited  === true;
+  const basePlanUpper   = (currentUser?.base_plan || '').toUpperCase();
+  // Priority: ALLACCESS addon > BUNDLE plan > UNLIMITED addon > base plan
+  const effectivePlan   = hasAllAccess
+    ? 'ALLACCESS'
+    : basePlanUpper === 'BUNDLE'
+      ? 'BUNDLE'
+      : hasUnlimited
+        ? 'UNLIMITED'
+        : currentUser?.base_plan;
+
   const { data: planLimitsData } = useQuery({
-    queryKey: ['planLimits', currentUser?.base_plan],
-    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: currentUser?.base_plan }),
-    enabled: !!currentUser?.base_plan,
+    queryKey: ['planLimits', effectivePlan],
+    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: effectivePlan }),
+    enabled: !!effectivePlan,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -44,45 +57,43 @@ export function useUsageLimits() {
   const limits = planLimitsData?.[0] ?? FALLBACK_LIMITS;
   const usage  = monthlyUsageData?.[0] ?? {};
 
-  const addons = currentUser?.addons ?? {};
-  const plan   = (currentUser?.base_plan || '').toUpperCase();
+  const plan = (effectivePlan || '').toUpperCase();
 
-  // ALLACCESS plan or UNLIMITED plan — everything is unlimited
-  const isAllAccess = plan === 'ALLACCESS';
-  const isUnlimitedPlan = plan === 'UNLIMITED';
+  // BUNDLE/ALLACCESS — fully unlimited, no plan_limits check needed
+  const isBundle = plan === 'BUNDLE' || plan === 'ALLACCESS';
 
-  // Add-on overrides — bump to a high cap
-  const ADDON_LIMIT = 1000;
-  const hasAddonTranscriptions = addons.transcribe    === true || addons.TRANSCRIBE    === true;
-  const hasAddonVSL            = addons.vsl           === true || addons.VSL           === true;
-  const hasAddonAdCopy         = addons.ad            === true || addons.AD            === true
-                               || addons.adcopy       === true || addons.ADCOPY        === true;
+  // Feature-specific addon flags (addon keys match product_entitlements.code)
+  const hasAddonVSL         = addonsRaw.vsl          === true || addonsRaw.VSL          === true;
+  const hasAddonAd          = addonsRaw.ad            === true || addonsRaw.AD            === true;
+  const hasAddonVoiceCloner = addonsRaw.voicecloner   === true || addonsRaw.VOICECLONER   === true;
+  const hasAddonTranscribe  = addonsRaw.transcribe    === true || addonsRaw.TRANSCRIBE    === true;
 
   const checkLimit = (feature) => {
-    // ALLACCESS — fully unlimited on everything
-    if (isAllAccess) return { allowed: true, used: usage[`${feature}_used`] ?? 0, limit: -1 };
+    if (isBundle) return { allowed: true, used: usage[`${feature}_used`] ?? 0, limit: -1 };
 
-    const map = {
-      clones:         { used: usage.clones_used         ?? 0, limit: limits.clones },
-      vsl:            { used: usage.vsl_used            ?? 0, limit: hasAddonVSL ? ADDON_LIMIT : limits.vsl },
-      ad:             { used: usage.ad_used             ?? 0, limit: hasAddonAdCopy ? ADDON_LIMIT : limits.ad },
-      custom:         { used: usage.custom_used         ?? 0, limit: limits.custom },
-      transcriptions: { used: usage.transcriptions_used ?? 0, limit: hasAddonTranscriptions ? ADDON_LIMIT : limits.transcriptions },
-      credits:        { used: usage.credits_used        ?? 0, limit: limits.credits },
-      brand_studio:   { used: usage.brand_studio_used   ?? 0, limit: limits.brand_studio },
-      conversational: { used: usage.conversational_used ?? 0, limit: limits.conversational },
-      audio_mix:      { used: usage.audio_mix_used      ?? 0, limit: limits.audio_mix },
-      audiobook:      { used: usage.audiobook_used      ?? 0, limit: limits.audiobook },
+    const featureMap = {
+      credits:        { usedKey: 'credits_used',        limitVal: limits.credits },
+      clones:         { usedKey: 'clones_used',         limitVal: hasAddonVoiceCloner ? -1 : limits.clones },
+      vsl:            { usedKey: 'vsl_used',            limitVal: hasAddonVSL         ? -1 : limits.vsl },
+      ad:             { usedKey: 'ad_used',             limitVal: hasAddonAd          ? -1 : limits.ad },
+      custom:         { usedKey: 'custom_used',         limitVal: limits.custom },
+      transcriptions: { usedKey: 'transcriptions_used', limitVal: hasAddonTranscribe  ? -1 : limits.transcriptions },
+      brand_studio:   { usedKey: 'brand_studio_used',   limitVal: limits.brand_studio },
+      conversational: { usedKey: 'conversational_used', limitVal: limits.conversational },
+      audio_mix:      { usedKey: 'audio_mix_used',      limitVal: limits.audio_mix },
+      audiobook:      { usedKey: 'audiobook_used',      limitVal: limits.audiobook },
     };
 
-    const f = map[feature];
+    const f = featureMap[feature];
     if (!f) return { allowed: true, used: 0, limit: -1 };
 
-    // -1 from plan_limits = unlimited
-    if (isUnlimited(f.limit)) return { allowed: true, used: f.used, limit: -1 };
+    const used = usage[f.usedKey] ?? 0;
 
-    return { allowed: f.used < f.limit, used: f.used, limit: f.limit };
+    // -1 = unlimited (from plan_limits or addon override)
+    if (isUnlimited(f.limitVal)) return { allowed: true, used, limit: -1 };
+
+    return { allowed: used < f.limitVal, used, limit: f.limitVal };
   };
 
-  return { checkLimit, isAllAccess, isUnlimitedPlan };
+  return { checkLimit, isBundle };
 }

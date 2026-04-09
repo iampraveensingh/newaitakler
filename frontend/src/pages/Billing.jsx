@@ -121,10 +121,23 @@ export default function Billing() {
     queryFn: () => base44.auth.me()
   });
 
+  const addonsRaw         = currentUser?.addons ?? {};
+  const hasAllAccessAddon = addonsRaw.ALLACCESS === true || addonsRaw.allaccess === true;
+  const hasUnlimitedAddon = addonsRaw.UNLIMITED === true || addonsRaw.unlimited === true;
+  const basePlanUpper     = (currentUser?.base_plan || '').toUpperCase();
+  // Priority: ALLACCESS addon > BUNDLE plan > UNLIMITED addon > base plan
+  const effectivePlan     = hasAllAccessAddon
+    ? 'ALLACCESS'
+    : basePlanUpper === 'BUNDLE'
+      ? 'BUNDLE'
+      : hasUnlimitedAddon
+        ? 'UNLIMITED'
+        : currentUser?.base_plan;
+
   const { data: planLimits } = useQuery({
-    queryKey: ['planLimits', currentUser?.base_plan],
-    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: currentUser?.base_plan }),
-    enabled: !!currentUser?.base_plan
+    queryKey: ['planLimits', effectivePlan],
+    queryFn: () => base44.entities.PlanLimits.filter({ plan_id: effectivePlan }),
+    enabled: !!effectivePlan
   });
 
   const currentMonthYear = new Date().toISOString().slice(0, 7);
@@ -137,14 +150,13 @@ export default function Billing() {
     enabled: !!currentUser?.id
   });
 
-  const basePlan   = (currentUser?.base_plan || 'FE').toUpperCase();
+  const basePlan   = (effectivePlan || 'FE').toUpperCase();
   const addons     = currentUser?.addons || {};
   const limits     = planLimits?.[0] || {};
   const usage      = monthlyUsage?.[0] || {};
 
-  const isAllAccess   = basePlan === 'ALLACCESS';
-  const isUnlimitedPlan = basePlan === 'UNLIMITED';
-  const isFullyUnlocked = isAllAccess || isUnlimitedPlan;
+  const isBundle        = basePlan === 'BUNDLE';
+  const isFullyUnlocked = isBundle;
 
   const planInfo = PLAN_DISPLAY[basePlan] || { label: basePlan, color: 'from-slate-500 to-slate-600' };
 
@@ -152,7 +164,7 @@ export default function Billing() {
 
   const usageData = usageConfig.map(cfg => {
     const rawLimit = limits[cfg.limitKey];
-    const limit = isAllAccess ? -1 : (rawLimit ?? 0);
+    const limit = isBundle ? -1 : (rawLimit ?? 0);
     const used  = usage[cfg.usedKey] ?? 0;
     return { ...cfg, used, limit };
   });
@@ -318,7 +330,7 @@ export default function Billing() {
                         ? "from-emerald-400 via-teal-400 to-cyan-400"
                         : "from-amber-400 via-orange-400 to-rose-400"
                     )}>
-                      {isAllAccess ? 'All Access Plan' : 'Unlimited Plan'}
+                      {'Bundle Plan'}
                     </h3>
                     <p className="text-slate-400 mt-1">
                       {isFullyUnlocked ? 'You have full unlimited access' : 'Remove all limits forever'}

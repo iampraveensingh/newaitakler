@@ -217,10 +217,11 @@ export default function Agency() {
     return a || {};
   })();
 
-  const plan       = (currentUser?.base_plan || '').toUpperCase();
-  const isAllAccess = plan === 'ALLACCESS';
-  // ALLACCESS plan = everything unlocked, including agency features
-  const hasAgency  = isAllAccess || addons?.AGENCY === true || addons?.agency === true;
+  const basePlan    = (currentUser?.base_plan || '').toUpperCase();
+  const hasAllAccess = addons?.ALLACCESS === true || addons?.allaccess === true;
+  const plan        = hasAllAccess ? 'ALLACCESS' : basePlan;
+  // BUNDLE and ALLACCESS unlock agency features; individual AGENCY addon also grants access
+  const hasAgency   = plan === 'BUNDLE' || plan === 'ALLACCESS' || addons?.AGENCY === true || addons?.agency === true;
   const isAdmin    = currentUser?.role === 'admin';
 
   const { data: stats, isLoading: loadingStats } = useQuery({

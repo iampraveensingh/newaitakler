@@ -548,6 +548,12 @@ CREATE TABLE IF NOT EXISTS `audiobooks` (
   CONSTRAINT `fk_ab_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- MIGRATION: add job_id to custom_voices for TTS generation tracking
+ALTER TABLE `custom_voices`
+  ADD COLUMN IF NOT EXISTS `job_id` VARCHAR(255) NULL
+  COMMENT 'Job ID returned by TTS generation API'
+  AFTER `audio_url`;
+
 -- MIGRATION: for existing tables created before the simplified schema
 ALTER TABLE `audiobooks`
   ADD COLUMN IF NOT EXISTS `file_url`      TEXT        NULL        AFTER `original_file`,

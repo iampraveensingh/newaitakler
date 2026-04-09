@@ -24,7 +24,8 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
       window.location.href = '/SignIn';
@@ -257,6 +258,26 @@ export const notifications = {
   },
 };
 
+// ─── ADMIN ───────────────────────────────────────────────────────────────────
+
+export const adminApi = {
+  userVoices: async () => {
+    const { data } = await apiClient.get('/admin/user-voices');
+    return data.data;
+  },
+};
+
+// ─── CUSTOM VOICES ───────────────────────────────────────────────────────────
+
+export const customVoices = {
+  generate: async ({ description, tone, style, use_case, test_script }) => {
+    const { data } = await apiClient.post('/custom-voices/generate', {
+      description, tone, style, use_case, test_script,
+    });
+    return data.data; // { job_id, output_url }
+  },
+};
+
 // ─── AI INTEGRATIONS ─────────────────────────────────────────────────────────
 
 export const integrations = {
@@ -313,8 +334,10 @@ export const base44 = {
   entities,
   uploads,
   agency,
+  adminApi,
   notifications,
   systemVoices,
+  customVoices,
   jobs,
   trackUsage,
   integrations,

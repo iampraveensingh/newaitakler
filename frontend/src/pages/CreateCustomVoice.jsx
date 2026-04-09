@@ -6,7 +6,7 @@ import { useUsageLimits } from '@/hooks/useUsageLimits';
 import { createPageUrl } from '@/utils';
 import {
   Sparkles, Save, Loader2, AlertTriangle, HelpCircle,
-  Copy, Check, Wand2,
+  Copy, Check, Wand2, Volume2, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
-import GeneratingOverlay from '@/components/ui/GeneratingOverlay';
+import AudioWaveformPlayer from '@/components/audio/AudioWaveformPlayer';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -143,11 +143,123 @@ const categories = [
 ];
 
 const testScripts = [
-  "Welcome to our platform. We're excited to have you here.",
-  "In today's fast-paced world, efficiency is everything.",
-  "Once upon a time, in a land far away...",
-  "Breaking news: Scientists have made an incredible discovery.",
+  "Introducing the all-new SmartFlow Pro — the productivity app that adapts to how you work, not the other way around. Whether you're managing a team or tackling solo projects, SmartFlow keeps everything in sync, so you can focus on what actually matters. Try it free for 30 days. Your best work starts here.",
+  "Deep in the heart of the Amazon, where the river bends and the canopy blocks out the sun, Dr. Elena Marsh made a discovery that would change everything she thought she knew about ancient civilizations. The artifact in her hands was unlike anything in any museum — and someone else was looking for it.",
+  "Scientists have confirmed that a newly identified mineral compound, found only in the deep-sea trenches of the Pacific Ocean, may hold the key to next-generation battery technology. If early results hold up, it could cut charging times by over eighty percent — and reshape the global energy market within a decade.",
+  "Close your eyes. Take a slow, deep breath in — and let it go. You are exactly where you need to be. Each exhale releases tension you've been carrying. Each inhale brings you closer to calm. This is your moment. There's nothing to solve right now. Just breathe, and let yourself rest.",
 ];
+
+// ─── Voice Generation Loader Card ────────────────────────────────────────────
+
+const GEN_STEPS = [
+  'Initializing voice generation…',
+  'Processing input text…',
+  'Applying tone and style…',
+  'Generating audio…',
+  'Finalizing output…',
+];
+
+function VoiceGeneratingCard({ error, onRetry }) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (error) return;
+    const t = setInterval(() => {
+      setStep(s => (s < GEN_STEPS.length - 1 ? s + 1 : s));
+    }, 1400);
+    return () => clearInterval(t);
+  }, [error]);
+
+  // Reset step when a new generation starts
+  useEffect(() => { if (!error) setStep(0); }, [error]);
+
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-red-500/30 bg-red-500/5 p-4"
+      >
+        <div className="flex items-center gap-2.5 mb-2">
+          <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <span className="text-sm font-semibold text-red-300">Generation failed</span>
+        </div>
+        <p className="text-xs text-red-400/80 leading-relaxed mb-3">{error}</p>
+        <button
+          onClick={onRetry}
+          className="text-xs font-medium text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors"
+        >
+          Try again
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-4 overflow-hidden relative"
+    >
+      {/* Shimmer sweep */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -skew-x-12 pointer-events-none"
+        animate={{ x: ['-120%', '220%'] }}
+        transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 0.6, ease: 'easeInOut' }}
+      />
+
+      {/* Animated sound bars */}
+      <div className="flex items-end justify-center gap-[3px] h-10 mb-4">
+        {[0.6, 1, 0.75, 1, 0.5, 0.85, 0.65, 1, 0.45, 0.9].map((base, i) => (
+          <motion.div
+            key={i}
+            className="w-1.5 rounded-full bg-gradient-to-t from-amber-500 to-orange-400"
+            animate={{ scaleY: [base * 0.4, base, base * 0.55, base * 0.9, base * 0.3, base] }}
+            transition={{
+              duration: 0.9 + (i % 3) * 0.25,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: i * 0.08,
+            }}
+            style={{ height: '100%', transformOrigin: 'bottom' }}
+          />
+        ))}
+      </div>
+
+      {/* Status label */}
+      <div className="text-center mb-3">
+        <p className="text-xs font-semibold text-amber-300 mb-1">Creating Your Voice</p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={step}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.25 }}
+            className="text-[11px] text-slate-400 leading-relaxed"
+          >
+            {GEN_STEPS[step]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+
+      {/* Step dots */}
+      <div className="flex items-center justify-center gap-1.5">
+        {GEN_STEPS.map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              width:           i === step ? 14 : 6,
+              backgroundColor: i <= step ? '#f59e0b' : '#334155',
+            }}
+            transition={{ duration: 0.3 }}
+            className="h-1.5 rounded-full"
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── Help Modal ───────────────────────────────────────────────────────────────
 
@@ -326,8 +438,10 @@ export default function CreateCustomVoice() {
   const navigate = useNavigate();
   const { checkLimit } = useUsageLimits();
   const customLimit = checkLimit('custom');
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showHelp,     setShowHelp]     = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [preview,      setPreview]      = useState(null); // { output_url, job_id }
+  const [genError,     setGenError]     = useState(null); // error message string
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -338,7 +452,7 @@ export default function CreateCustomVoice() {
     category: 'professional',
   });
 
-  const createVoiceMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.CustomVoice.create(data),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['customVoices'] });
@@ -349,40 +463,56 @@ export default function CreateCustomVoice() {
       } finally {
         queryClient.invalidateQueries({ queryKey: ['monthlyUsage'] });
       }
+      toast.success('Voice saved to your library!');
+      navigate(createPageUrl('CustomVoiceList'));
     },
     onError: (error) => {
-      setShowOverlay(false);
       toast.error(`Failed to save voice: ${error.message}`);
     },
   });
 
-  const saveVoice = async () => {
+  // Step 1 — Generate: call TTS API and show preview player
+  const generateVoice = async () => {
     if (!customLimit.allowed) return;
-    setShowOverlay(true);
+    setIsGenerating(true);
+    setPreview(null);
+    setGenError(null);
     try {
-      await createVoiceMutation.mutateAsync({ ...formData, status: 'pending' });
-    } catch {
-      // onError handles toast + hiding overlay
+      const ttsResult = await base44.customVoices.generate({
+        description: formData.description,
+        tone:        formData.tone,
+        style:       formData.style,
+        use_case:    formData.use_case,
+        test_script: formData.test_script,
+      });
+      setPreview(ttsResult); // { output_url, job_id }
+    } catch (err) {
+      setGenError(err?.response?.data?.message || 'Voice generation failed. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
+  };
+
+  // Step 2 — Save: persist the record with the generated audio
+  const confirmSave = () => {
+    if (!preview) return;
+    saveMutation.mutate({
+      ...formData,
+      audio_url: preview.output_url,
+      job_id:    preview.job_id,
+      status:    'ready',
+    });
   };
 
   return (
     <>
-      <GeneratingOverlay
-        isVisible={showOverlay}
-        type="customvoice"
-        title="Creating Your Custom Voice"
-        onComplete={() => navigate(createPageUrl('CustomVoiceList'))}
-        autoComplete={true}
-      />
-
       <VoiceDescriptionHelpModal
         open={showHelp}
         onClose={() => setShowHelp(false)}
         onUsePrompt={(p) => setFormData(prev => ({ ...prev, description: p }))}
       />
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto pb-12 space-y-6">
         <PageHeader
           title="Create Custom Voice"
           description="Design a unique AI voice from text description"
@@ -449,20 +579,22 @@ export default function CreateCustomVoice() {
                         )}
                       >
                         {/* Label row */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm">{item.emoji}</span>
-                            <span className={cn('text-xs font-bold bg-gradient-to-r bg-clip-text text-transparent', item.gradient)}>
-                              {item.label}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-sm">{item.emoji}</span>
+                          <span className={cn('text-xs font-bold bg-gradient-to-r bg-clip-text text-transparent', item.gradient)}>
+                            {item.label}
+                          </span>
+                        </div>
+                        {/* Tags row */}
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {item.tags.map(tag => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center justify-center whitespace-nowrap text-xs px-2.5 py-1 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/40 group-hover:text-slate-300 transition-colors leading-none"
+                            >
+                              {tag}
                             </span>
-                          </div>
-                          <div className="flex gap-1">
-                            {item.tags.map(tag => (
-                              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/40 group-hover:text-slate-300 transition-colors">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
+                          ))}
                         </div>
                         {/* Prompt preview */}
                         <p className="text-xs text-slate-400 group-hover:text-slate-300 leading-relaxed line-clamp-2 transition-colors">
@@ -575,17 +707,59 @@ export default function CreateCustomVoice() {
                   </div>
                 </div>
               )}
+
+              {/* Generate button */}
               <Button
-                onClick={saveVoice}
-                disabled={!formData.name || !formData.description || createVoiceMutation.isPending || !customLimit.allowed}
+                onClick={generateVoice}
+                disabled={!formData.name || !formData.description || isGenerating || !customLimit.allowed}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 h-12"
               >
-                {createVoiceMutation.isPending ? (
-                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
-                ) : (
-                  <><Save className="w-5 h-5 mr-2" /> Save Voice</>
-                )}
+                <Sparkles className="w-5 h-5 mr-2" />
+                {preview ? 'Regenerate' : 'Generate Voice'}
               </Button>
+
+              {/* Loader card — shown while generating */}
+              <AnimatePresence>
+                {isGenerating && (
+                  <VoiceGeneratingCard error={null} />
+                )}
+              </AnimatePresence>
+
+              {/* Error card — shown after failed generation */}
+              <AnimatePresence>
+                {genError && !isGenerating && (
+                  <VoiceGeneratingCard error={genError} onRetry={generateVoice} />
+                )}
+              </AnimatePresence>
+
+              {/* Preview card — shown after successful generation */}
+              <AnimatePresence>
+                {preview && !isGenerating && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-sm font-medium text-amber-300">Preview</span>
+                    </div>
+                    <AudioWaveformPlayer key={preview.output_url} audioUrl={preview.output_url} compact />
+                    <Button
+                      onClick={confirmSave}
+                      disabled={saveMutation.isPending}
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 h-11"
+                    >
+                      {saveMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
+                      ) : (
+                        <><Save className="w-4 h-4 mr-2" /> Save Voice</>
+                      )}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

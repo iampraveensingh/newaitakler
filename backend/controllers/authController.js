@@ -77,14 +77,13 @@ export const login = async (req, res) => {
     console.log('[AUTH] External auth response:', JSON.stringify(data, null, 2));
 
     // Step 2: Check for error indicators in response
-    const isError = data.error === true ||
+    const isError = (data.error && data.error !== false) ||
                     data.success === false ||
                     data.status === 'error' ||
                     (data.message && /fail|invalid|wrong|incorrect|denied|unauthorized/i.test(data.message));
 
     if (isError) {
-      const message = data.message || 'Authentication failed.';
-      return errorResponse(res, message, 401);
+      return errorResponse(res, 'Invalid username or password.', 401);
     }
 
     // Step 3: Extract active product IDs
@@ -106,6 +105,10 @@ export const login = async (req, res) => {
     console.log('[AUTH] Step 3 — Active product IDs from ProWebVentures:', productIds);
 
     if (productIds.length === 0) {
+      // If the response carries no user identity, credentials were likely wrong
+      if (!data.email && !data.full_name && !data.username) {
+        return errorResponse(res, 'Invalid username or password.', 401);
+      }
       return errorResponse(res, 'No active products found on your account. Please contact support.', 403);
     }
 
@@ -149,7 +152,7 @@ export const login = async (req, res) => {
     console.log('[AUTH] Step 5 — Selected basePlan:', basePlan, '(priority:', highestPriority + ')');
 
     // Any recognized LOGIN_PLAN grants access
-    const ACCESS_PLANS = ['FE', 'XTREME', 'PRO', 'UNLIMITED', 'ALLACCESS'];
+    const ACCESS_PLANS = ['FE', 'XTREME', 'BUNDLE'];
     const hasBaseAccess = loginPlans.some(e => ACCESS_PLANS.includes((e.code || '').toUpperCase()));
     if (loginPlans.length > 0 && !hasBaseAccess) {
       return errorResponse(res, 'Your product does not grant access. Please contact support.', 403);

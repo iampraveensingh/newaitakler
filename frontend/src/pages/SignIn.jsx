@@ -84,7 +84,7 @@ export default function SignIn() {
             {/* Logo */}
             <div className="mb-5">
               <img
-                src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+                src="https://app.aitalker.io/uploads/AIT-FE-02-Logo-01.png"
                 alt="AI Talker"
                 className="h-10 sm:h-12 w-auto object-contain mx-auto"
               />

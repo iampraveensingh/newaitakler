@@ -244,8 +244,8 @@ function Sidebar({ mobile = false }) {
   const { sidebarOpen, addonsObj, plan } = useContext(NavCtx);
 
   const isAddonEnabled = (key) => {
-    // ALLACCESS plan unlocks everything
-    if (plan === 'ALLACCESS') return true;
+    // BUNDLE and ALLACCESS unlock all external apps
+    if (plan === 'BUNDLE' || plan === 'ALLACCESS') return true;
     return addonsObj[key] === true || addonsObj[key?.toUpperCase()] === true;
   };
 
@@ -254,7 +254,7 @@ function Sidebar({ mobile = false }) {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-800/50 flex items-center justify-start">
         <img
-          src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+          src="https://app.aitalker.io/uploads/AIT-FE-02-Logo-01.png"
           alt="AI Talker"
           className={`object-contain transition-all duration-300 ${sidebarOpen || mobile ? 'h-10 w-auto' : 'h-8 w-8'}`}
         />
@@ -321,8 +321,12 @@ export default function Layout({ children, currentPageName }) {
 
   // Prefer TanStack Query result (fresher / cached); fall back to AuthContext user
   const resolvedUser = currentUser || user;
-  const addonsObj = (resolvedUser?.addons && typeof resolvedUser.addons === 'object' && !Array.isArray(resolvedUser.addons)) ? resolvedUser.addons : {};
-  const plan      = (resolvedUser?.base_plan || '').toUpperCase();
+  const addonsObj    = (resolvedUser?.addons && typeof resolvedUser.addons === 'object' && !Array.isArray(resolvedUser.addons)) ? resolvedUser.addons : {};
+  const basePlanRaw  = (resolvedUser?.base_plan || '').toUpperCase();
+  // ALLACCESS addon elevates effective plan to ALLACCESS
+  const plan         = (addonsObj.ALLACCESS === true || addonsObj.allaccess === true)
+    ? 'ALLACCESS'
+    : basePlanRaw;
   // Only block Billing for agency SUB-users (agency_owner_id set = managed account)
   // Admins who have the AGENCY addon or ALLACCESS plan should still access Billing normally
   const hasAgency = !!resolvedUser?.agency_owner_id;
@@ -401,7 +405,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <img
-                src="https://staging.prowebventures.com/uploads/AIT-FE-02-Logo-01.png"
+                src="https://app.aitalker.io/uploads/AIT-FE-02-Logo-01.png"
                 alt="AI Talker"
                 className="h-9 w-auto object-contain"
               />
