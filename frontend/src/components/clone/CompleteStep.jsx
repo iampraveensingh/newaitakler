@@ -1,13 +1,14 @@
 import React from 'react';
-import { CheckCircle, Mic, Users, Sparkles } from 'lucide-react';
+import { CheckCircle, Mic, Users, Sparkles, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
 
-export default function CompleteStep({ voiceName }) {
+
+export default function CompleteStep({ voiceName, onCreateNew }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center py-12 text-center space-y-8"
@@ -30,11 +31,11 @@ export default function CompleteStep({ voiceName }) {
       {/* Success Message */}
       <div>
         <h2 className="text-3xl font-bold text-white mb-3">
-          Voice Clone Processing!
+          Voice Successfully Queued
         </h2>
         <p className="text-slate-400 max-w-md">
-          {voiceName ? `"${voiceName}" has been` : 'Your voice clone has been'} successfully created. 
-          Your voice clone is now in processing. It will be ready in approximately 2 minutes.
+          {voiceName ? `"${voiceName}" has been` : 'Your voice has been'} successfully queued.
+          It will appear in your Account in under 3-5 Minutes.
         </p>
       </div>
 
@@ -59,14 +60,12 @@ export default function CompleteStep({ voiceName }) {
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-        <Link to={createPageUrl('CreateVoiceover')} className="flex-1">
-          <Button className="w-full h-14 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-lg">
-            <Mic className="w-5 h-5 mr-2" /> Create Voiceover
-          </Button>
-        </Link>
+        <Button onClick={onCreateNew} className="flex-1 h-14 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-lg">
+          <Plus className="w-5 h-5 mr-2" /> Create New Clone
+        </Button>
         <Link to={createPageUrl('CloneList')} className="flex-1">
           <Button variant="outline" className="w-full h-14 text-lg">
-            View My Clones
+            <Users className="w-5 h-5 mr-2" /> View Clones
           </Button>
         </Link>
       </div>

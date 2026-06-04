@@ -6,7 +6,10 @@ export const getMe = async (req, res) => {
     const user = req.user;
     let addons = user.addons;
     if (typeof addons === 'string') { try { addons = JSON.parse(addons); } catch { addons = {}; } }
-    return successResponse(res, { ...user, addons });
+    let billing_product_ids = user.billing_product_ids;
+    if (typeof billing_product_ids === 'string') { try { billing_product_ids = JSON.parse(billing_product_ids); } catch { billing_product_ids = []; } }
+    if (!Array.isArray(billing_product_ids)) billing_product_ids = [];
+    return successResponse(res, { ...user, addons, billing_product_ids });
   } catch (error) {
     return errorResponse(res, 'Failed to get user profile', 500);
   }

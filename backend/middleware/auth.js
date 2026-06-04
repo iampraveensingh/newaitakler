@@ -20,10 +20,14 @@ export const verifyToken = async (req, res, next) => {
       return errorResponse(res, 'User not found', 401);
     }
     req.user = rows[0];
-    // Parse addons JSON if stored as string
+    // Parse JSON fields if stored as strings
     if (typeof req.user.addons === 'string') {
       try { req.user.addons = JSON.parse(req.user.addons); } catch { req.user.addons = {}; }
     }
+    if (typeof req.user.billing_product_ids === 'string') {
+      try { req.user.billing_product_ids = JSON.parse(req.user.billing_product_ids); } catch { req.user.billing_product_ids = []; }
+    }
+    if (!Array.isArray(req.user.billing_product_ids)) req.user.billing_product_ids = [];
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

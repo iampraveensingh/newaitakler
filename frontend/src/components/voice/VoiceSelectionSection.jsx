@@ -4,9 +4,10 @@ import { base44, systemVoices as systemVoicesApi } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import VoiceCard from './VoiceCard';
 import IconTabs from '@/components/ui/IconTabs';
-import { Mic, MessageSquare, BookOpen, Theater, Share2, GraduationCap, Megaphone, Star, Copy, Sparkles, Loader2, Clock } from 'lucide-react';
+import { Mic, MessageSquare, BookOpen, Theater, Share2, GraduationCap, Megaphone, Star, Copy, Sparkles, Loader2, Clock, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 
-const voiceCategories = [
+const BASE_VOICE_CATEGORIES = [
   { value: 'recent',        label: 'Recent',        icon: Clock          },
   { value: 'all',           label: 'All Voices',    icon: Mic            },
   { value: 'conversational',label: 'Conversational',icon: MessageSquare  },
@@ -20,8 +21,28 @@ const voiceCategories = [
   { value: 'custom',        label: 'Custom',        icon: Sparkles       },
 ];
 
-export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, initialTab }) {
+const PREMIUM_TAB = { value: 'premium', label: 'Premium', icon: Zap };
+
+export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, initialTab, extraVoices = [], premiumVoices = [], hasPremiumAccess = false }) {
+  const hasPremium = premiumVoices.length > 0;
+  const voiceCategories = hasPremium
+    ? [...BASE_VOICE_CATEGORIES, PREMIUM_TAB]
+    : BASE_VOICE_CATEGORIES;
   const [activeTab, setActiveTab] = useState(initialTab || 'all');
+
+  const handleTabChange = (tab) => {
+    if (tab === 'premium' && !hasPremiumAccess) {
+      toast('Subscription required', {
+        description: 'Upgrade to Unlimited, Bundle, or All Access to unlock Premium Voices.',
+        action: {
+          label: 'Subscribe',
+          onClick: () => window.open('https://aitalker.io/unlimited-v3', '_blank', 'noopener,noreferrer'),
+        },
+      });
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   // Fetch system voices from DB
   const { data: rawSystemVoices = [], isLoading: loadingSystem } = useQuery({
@@ -82,19 +103,15 @@ export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, 
     audio: v.audio_url || ''
   }));
 
-  // Combine all voices
+  // extraVoices (emotion) at the top of All; premiumVoices in their own tab only
   const allVoicesData = [...stockVoicesData, ...clonedVoicesList, ...customVoicesList];
+  const allVoicesWithExtra = [...extraVoices, ...allVoicesData];
 
   const getVoicesForCategory = (categoryKey) => {
-    if (categoryKey === 'all') {
-      return allVoicesData;
-    }
-    if (categoryKey === 'cloned') {
-      return clonedVoicesList;
-    }
-    if (categoryKey === 'custom') {
-      return customVoicesList;
-    }
+    if (categoryKey === 'all')     return allVoicesWithExtra;
+    if (categoryKey === 'premium') return premiumVoices;
+    if (categoryKey === 'cloned')  return clonedVoicesList;
+    if (categoryKey === 'custom')  return customVoicesList;
     return stockVoicesData.filter(voice => voice.type === categoryKey);
   };
 
@@ -122,9 +139,10 @@ export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, 
     onSelectVoice(id, name, type, audio);
   };
 
-  // Map recent voice data to full voice objects
+  // Map recent voice data to full voice objects (search all pools)
   const recentVoiceObjects = recentVoices.map(rv => {
-    const found = allVoicesData.find(v => v.id === rv.id);
+    const found = allVoicesWithExtra.find(v => v.id === rv.id)
+      || premiumVoices.find(v => v.id === rv.id);
     return found || { id: rv.id, name: rv.name, type: rv.type, description: '', audio: '' };
   }).filter(Boolean);
 
@@ -140,9 +158,12 @@ export default function VoiceSelectionSection({ selectedVoiceId, onSelectVoice, 
   return (
     <div className="space-y-4 pt-4">
       <IconTabs
-        tabs={voiceCategories}
+        tabs={voiceCategories.map(t => t.value === 'premium' && !hasPremiumAccess
+          ? { ...t, locked: true }
+          : t
+        )}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
 
       <div className="max-h-[420px] overflow-y-auto pr-2 pt-2 pb-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">

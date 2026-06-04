@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
@@ -17,6 +18,7 @@ import { registerConnection, removeConnection } from './utils/wsManager.js';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import aiRoutes from './routes/ai.js';
+import { callDeepSeek } from './controllers/aiController.js';
 import uploadRoutes from './routes/uploads.js';
 import planRoutes, { usageRouter, dfyOffersRouter } from './routes/plan.js';
 import agencyRoutes from './routes/agency.js';
@@ -27,6 +29,8 @@ import voiceCloneRoutes from './routes/voiceClones.js';
 import notificationRoutes from './routes/notifications.js';
 import systemVoicesRoutes from './routes/systemVoices.js';
 import jobsRoutes from './routes/jobs.js';
+import apiKeyRoutes from './routes/apiKeys.js';
+import { fetchVoices, generateVoice } from './controllers/publicApiController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -47,8 +51,8 @@ app.use('/music', express.static(path.join(__dirname, 'music')));
 // Format: buildEntityRouter(tableName, [allowedFields], userScoped)
 
 const voiceoverRoutes = buildEntityRouter('voiceovers', [
-  'title', 'keywords', 'script', 'script_source', 'voice_type', 'voice_id', 'voice_name', 'voice_url',
-  'language', 'emotion', 'emotion_strength', 'scene_mode', 'voice_consistency',
+  'title', 'keywords', 'script', 'script_source', 'voice_id', 'voice_name', 'voice_url',
+  'language', 'emotion', 'emotion_strength', 'scene_mode', 'voice_consistency', 'api_type',
   'background_music', 'background_music_enabled', 'background_music_volume',
   'status', 'audio_url', 'is_favorite', 'tags',
 ]);
@@ -104,6 +108,11 @@ app.use('/api/plan-limits',       planRoutes);
 app.use('/api/usage-monthly',     usageRouter);
 app.use('/api/dfy-offers',        dfyOffersRouter);
 app.use('/api/agency',            agencyRoutes);
+app.use('/api/api-keys',          apiKeyRoutes);
+
+// ── Public Voice API (authenticated via X-API-Key header, no JWT) ─────────────
+app.post('/api/v1/voices',   fetchVoices);
+app.post('/api/v1/generate', generateVoice);
 app.use('/api/jobs',              jobsRoutes);
 app.use('/api/scrape',            scrapeRoutes);
 app.use('/api/extract-script',   extractScriptRoutes);
@@ -152,6 +161,30 @@ app.get('/api/admin/user-voices', verifyToken, async (_req, res) => {
   }
 });
 
+// ── Custom Voice Queue Status ──────────────────────────────────────────────────
+app.get('/api/custom-voices/queue-status', verifyToken, async (req, res) => {
+  try {
+    const body = JSON.stringify({
+      api_key: process.env.TTS_API_KEY,
+      mode: 'queue_status',
+      prompt: 'queue',
+    });
+    const response = await axios.post(
+      process.env.TTS_API_URL_queue || 'https://srv16.aisoftllc.com/apis/api.php',
+      body,
+      { headers: { 'Content-Type': 'text/plain' }, timeout: 15000 }
+    );
+    const result = response.data;
+    if (result?.status !== 'success') {
+      return res.status(422).json({ success: false, message: 'Failed to fetch queue status.' });
+    }
+    return res.json({ success: true, data: result.data }); // { running, pending }
+  } catch (error) {
+    console.error('Queue status error:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch queue status.' });
+  }
+});
+
 // ── Custom Voice TTS Generation ───────────────────────────────────────────────
 app.post('/api/custom-voices/generate', verifyToken, async (req, res) => {
   try {
@@ -162,16 +195,16 @@ app.post('/api/custom-voices/generate', verifyToken, async (req, res) => {
     const ttsBody = JSON.stringify({
       api_key: process.env.TTS_API_KEY,
       mode: 'prompt_voices',
-      "prompt":prompt,
+      prompt,
       tts_text: test_script || '',
     });
-console.log('Sending TTS API request with body:', ttsBody);
+    console.log('Sending TTS API request with body:', ttsBody);
     const ttsResponse = await axios.post(
       process.env.TTS_API_URL || 'https://srv16.aisoftllc.com/apis/api.php',
       ttsBody,
       { headers: { 'Content-Type': 'text/plain' }, timeout: 60000 }
     );
-    
+
     const result = ttsResponse.data;
     if (result?.status !== 'success' || !result?.data?.output_url) {
       return res.status(422).json({
@@ -180,11 +213,24 @@ console.log('Sending TTS API request with body:', ttsBody);
       });
     }
 
+    // ── Download audio and save locally ─────────────────────────────────────
+    const uploadDir = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    const filename  = `custom_voice_${Date.now()}-${Math.round(Math.random() * 1e9)}.mp3`;
+    const localPath = path.join(uploadDir, filename);
+
+    const audioResponse = await axios.get(result.data.output_url, { responseType: 'arraybuffer', timeout: 60000 });
+    fs.writeFileSync(localPath, Buffer.from(audioResponse.data));
+
+    const baseUrl    = process.env.BASE_URL || `http://localhost:${PORT}`;
+    const localUrl   = `${baseUrl}/uploads/${filename}`;
+
     res.json({
       success: true,
       data: {
         job_id:     result.data.job_id,
-        output_url: result.data.output_url,
+        output_url: localUrl,
       },
     });
   } catch (error) {
@@ -195,6 +241,102 @@ console.log('Sending TTS API request with body:', ttsBody);
     }
     const apiMsg = error.response?.data?.message || error.response?.data?.error;
     res.status(500).json({ success: false, message: apiMsg || 'Voice generation failed. Please try again.' });
+  }
+});
+
+// ── Human Voice Generation ────────────────────────────────────────────────────
+app.post('/api/custom-voices/generate-human', verifyToken, async (req, res) => {
+  try {
+    const { description, tone, style, use_case, test_script } = req.body;
+    const rawInput = [description, tone, style, use_case].filter(Boolean).join('. ');
+
+    // ── Format prompt via AI ─────────────────────────────────────────────────
+    const systemPrompt = `You are a voice character design expert. Your job is to take any user description of a voice — no matter how casual, vague, or detailed — and rewrite it as a precise, vivid, single-sentence voice control prompt.
+
+The output must follow this exact pattern:
+[Character type / age / gender] with a [voice quality descriptors]. Speaks [pace] with a [emotional/tonal adjectives] tone.
+
+Rules:
+- Always produce exactly ONE sentence
+- Be specific about: character type, age/gender, voice texture (soft/deep/nasal/airy/etc.), speaking pace (slowly/quickly/steadily), and emotional tone
+- Never add explanations, quotes, or extra text — output only the formatted sentence
+
+Examples of good output:
+"A young girl with a soft, sweet voice. Speaks slowly with a melancholic, slightly tsundere tone."
+"A relaxed young male voice, slightly nasal, lazy drawl. Speaks casually with a very chill and laid-back tone."
+"A dramatic villain with a deep, echoing voice. Speaks slowly with a sinister, intense and theatrical tone."
+"An excited child with a high-pitched voice. Speaks quickly with an eager, playful and curious tone."`;
+
+    // ── Queue check before generating ───────────────────────────────────────
+    const queueResponse = await axios.post(
+      process.env.HUMAN_VOICE_API_URL || 'https://srv16.aisoftllc.com/apis/prompt_api.php',
+      JSON.stringify({ api_key: process.env.TTS_API_KEY, check_task: '1' }),
+      { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+    const queueData = queueResponse.data;
+    console.log('Human Voice queue status:', JSON.stringify(queueData));
+    if ((queueData?.running_count ?? 0) > 2) {
+      return res.status(429).json({
+        success: false,
+        message: "We're experiencing high demand right now. Please try again shortly — your patience is appreciated.",
+      });
+    }
+
+    const formattedControl = await callDeepSeek(systemPrompt, rawInput, { maxTokens: 120, temperature: 0.5 });
+    const control = formattedControl.trim().replace(/^["']|["']$/g, ''); // strip surrounding quotes if any
+    console.log('Human Voice - raw input:', rawInput);
+    console.log('Human Voice - formatted control:', control);
+
+    const payload = JSON.stringify({
+      api_key: process.env.TTS_API_KEY,
+      control,
+      text: test_script || '',
+    });
+
+    console.log('Sending Human Voice API request:', payload);
+    const apiResponse = await axios.post(
+      process.env.HUMAN_VOICE_API_URL || 'https://srv16.aisoftllc.com/apis/prompt_api.php',
+      payload,
+      { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+    );
+
+    const result = apiResponse.data;
+    if (result?.status !== 'success' || !result?.url) {
+      return res.status(422).json({
+        success: false,
+        message: result?.message || 'Human voice generation failed. Please try again.',
+      });
+    }
+
+    // ── Download audio and save locally ─────────────────────────────────────
+    const uploadDir = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    const ext      = result.url.endsWith('.wav') ? 'wav' : 'mp3';
+    const filename = `custom_voice_${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+    const localPath = path.join(uploadDir, filename);
+
+    const audioResponse = await axios.get(result.url, { responseType: 'arraybuffer', timeout: 60000 });
+    fs.writeFileSync(localPath, Buffer.from(audioResponse.data));
+
+    const baseUrl  = process.env.BASE_URL || `http://localhost:${PORT}`;
+    const localUrl = `${baseUrl}/uploads/${filename}`;
+
+    res.json({
+      success: true,
+      data: {
+        job_id:     null,
+        output_url: localUrl,
+      },
+    });
+  } catch (error) {
+    console.error('Human voice generation error:', error.message);
+    if (error.response) {
+      console.error('Human Voice API status:', error.response.status);
+      console.error('Human Voice API body:', JSON.stringify(error.response.data));
+    }
+    const apiMsg = error.response?.data?.message || error.response?.data?.error;
+    res.status(500).json({ success: false, message: apiMsg || 'Human voice generation failed. Please try again.' });
   }
 });
 

@@ -177,7 +177,7 @@ export default function ConversationalList() {
                         <Subtitles className="w-4 h-4" /> SRT
                       </Button>
                     )}
-                    {conv.status === 'draft' && (
+                    {(conv.status === 'draft' || conv.status === 'completed') && (
                       <Link to={`/CreateConversational?id=${conv.id}`}>
                         <Button variant="ghost" size="sm" className="text-slate-400 hover:text-violet-400 gap-1">
                           <Pencil className="w-4 h-4" /> Edit

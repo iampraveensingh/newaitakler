@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import apiClient from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import {
   AudioLines, Sparkles, RefreshCw, Youtube, FileText, Keyboard, Wand2,
-  Volume2, Music, Save, Video, Megaphone, Loader2, CheckCircle, Clock
+  Volume2, Music, Save, Video, Megaphone, Loader2, CheckCircle, Clock,
+  Zap, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import VoiceSelectionSection from '@/components/voice/VoiceSelectionSection';
+import VoiceCard from '@/components/voice/VoiceCard';
 import BackgroundMusicSection from '@/components/voice/BackgroundMusicSection';
 import CustomEmotionInput from '@/components/voice/CustomEmotionInput';
 import MusicVolumeSlider from '@/components/voice/MusicVolumeSlider';
@@ -68,6 +71,167 @@ const sceneModes = [
   { value: 'news',         label: 'News',         emoji: '📰' },
   { value: 'documentary',  label: 'Documentary',  emoji: '🎬' },
   { value: 'casual',       label: 'Casual',       emoji: '💬' },
+];
+
+// ─── Emotion Voice Mode ───────────────────────────────────────────────────────
+// audio: add a sample URL for each voice to enable playback preview in the card
+const EMOTION_VOICES = [
+  { id: 'tara',   display: 'Sophia',   audio: 'https://app.aitalker.io/uploads/sofia.mp3' },
+  { id: 'leah',   display: 'Aurora',   audio: 'https://app.aitalker.io/uploads/leah.mp3' },
+  { id: 'jess',   display: 'Chloe',    audio: 'https://app.aitalker.io/uploads/jess.mp3' },
+  { id: 'mia',    display: 'Isabella', audio: 'https://app.aitalker.io/uploads/mia.mp3' },
+  { id: 'zoe',    display: 'Scarlett', audio: 'https://app.aitalker.io/uploads/zoe.mp3' },
+  { id: 'rebeca', display: 'Natalie',  audio: 'https://app.aitalker.io/uploads/rebeca.mp3' },
+  { id: 'lisa',   display: 'Vivian',   audio: 'https://app.aitalker.io/uploads/lisa.mp3' },
+  { id: 'leo',    display: 'Ethan',    audio: 'https://app.aitalker.io/uploads/leo.mp3' },
+  { id: 'dan',    display: 'Marcus',   audio: 'https://app.aitalker.io/uploads/dan.mp3' },
+  { id: 'zac',    display: 'Caleb',    audio: 'https://app.aitalker.io/uploads/zac.mp3' },
+  { id: 'bob',    display: 'Adrian',   audio: 'https://app.aitalker.io/uploads/bob.mp3' },
+];
+
+// Shape emotion voices into VoiceCard-compatible objects
+const EMOTION_VOICE_CARDS = EMOTION_VOICES.map(v => ({
+  id:          `emotion_${v.id}`,
+  name:        v.display,
+  type:        'emotion',
+  description: '',
+  audio:       v.audio,
+}));
+
+// ─── LemonFox Voices (API type 3) ────────────────────────────────────────────
+const LEMONFOX_VOICES = [
+  // Female
+  { id: 'heart',    display: 'Heart',    audio: 'https://app.aitalker.io/music/lemonfox/tts-heart-en-us.mp3' },
+  { id: 'bella',    display: 'Bella',    audio: 'https://app.aitalker.io/music/lemonfox/tts-bella-en-us.mp3' },
+  { id: 'aoede',    display: 'Aoede',    audio: 'https://app.aitalker.io/music/lemonfox/tts-aoede-en-us.mp3' },
+  { id: 'kore',     display: 'Kore',     audio: 'https://app.aitalker.io/music/lemonfox/tts-kore-en-us.mp3' },
+  { id: 'jessica',  display: 'Jessica',  audio: 'https://app.aitalker.io/music/lemonfox/tts-jessica-en-us.mp3' },
+  { id: 'nicole',   display: 'Nicole',   audio: 'https://app.aitalker.io/music/lemonfox/tts-nicole-en-us.mp3' },
+  { id: 'nova',     display: 'Nova',     audio: 'https://app.aitalker.io/music/lemonfox/tts-nova-en-us.mp3' },
+  { id: 'river',    display: 'River',    audio: 'https://app.aitalker.io/music/lemonfox/tts-river-en-us.mp3' },
+  { id: 'sarah',    display: 'Sarah',    audio: 'https://app.aitalker.io/music/lemonfox/tts-sarah-en-us.mp3' },
+  { id: 'sky',      display: 'Sky',      audio: 'https://app.aitalker.io/music/lemonfox/tts-sky-en-us.mp3' },
+  { id: 'alice',    display: 'Alice',    audio: 'https://app.aitalker.io/music/lemonfox/tts-alice-en-gb.mp3' },
+  { id: 'emma',     display: 'Emma',     audio: 'https://app.aitalker.io/music/lemonfox/tts-emma-en-gb.mp3' },
+  { id: 'isabella', display: 'Isabella', audio: 'https://app.aitalker.io/music/lemonfox/tts-isabella-en-gb.mp3' },
+  { id: 'lily',     display: 'Lily',     audio: 'https://app.aitalker.io/music/lemonfox/tts-lily-en-gb.mp3' },
+  // Male
+  { id: 'michael',  display: 'Michael',  audio: 'https://app.aitalker.io/music/lemonfox/tts-michael-en-us.mp3' },
+  { id: 'alloy',    display: 'Alloy',    audio: 'https://app.aitalker.io/music/lemonfox/tts-alloy-en-us.mp3' },
+  { id: 'echo',     display: 'Echo',     audio: 'https://app.aitalker.io/music/lemonfox/tts-echo-en-us.mp3' },
+  { id: 'eric',     display: 'Eric',     audio: 'https://app.aitalker.io/music/lemonfox/tts-eric-en-us.mp3' },
+  { id: 'fenrir',   display: 'Fenrir',   audio: 'https://app.aitalker.io/music/lemonfox/tts-fenrir-en-us.mp3' },
+  { id: 'liam',     display: 'Liam',     audio: 'https://app.aitalker.io/music/lemonfox/tts-liam-en-us.mp3' },
+  { id: 'onyx',     display: 'Onyx',     audio: 'https://app.aitalker.io/music/lemonfox/tts-onyx-en-us.mp3' },
+  { id: 'puck',     display: 'Puck',     audio: 'https://app.aitalker.io/music/lemonfox/tts-puck-en-us.mp3' },
+  { id: 'adam',     display: 'Adam',     audio: 'https://app.aitalker.io/music/lemonfox/tts-adam-en-us.mp3' },
+  { id: 'santa',    display: 'Santa',    audio: 'https://app.aitalker.io/music/lemonfox/tts-santa-en-us.mp3' },
+  { id: 'daniel',   display: 'Daniel',   audio: 'https://app.aitalker.io/music/lemonfox/tts-daniel-en-gb.mp3' },
+  { id: 'fable',    display: 'Fable',    audio: 'https://app.aitalker.io/music/lemonfox/tts-lewis-en-gb.mp3' },
+  { id: 'george',   display: 'George',   audio: 'https://app.aitalker.io/music/lemonfox/tts-george-en-gb.mp3' },
+  { id: 'lewis',    display: 'Lewis',    audio: 'https://app.aitalker.io/music/lemonfox/tts-lewis-en-gb.mp3' },
+];
+
+// Spanish voices (api_type 3, shown only when language = 'es')
+const LEMONFOX_ES_VOICES = [
+  { id: 'dora', display: 'Dora', audio: 'https://app.aitalker.io/music/lemonfox/tts-dora-es.mp3' },
+  { id: 'alex', display: 'Alex', audio: 'https://app.aitalker.io/music/lemonfox/tts-alex-es.mp3' },
+  { id: 'noel', display: 'Noel', audio: 'https://app.aitalker.io/music/lemonfox/tts-noel-es.mp3' },
+];
+
+// French voices (api_type 3, shown only when language = 'fr')
+const LEMONFOX_FR_VOICES = [
+  { id: 'siwis', display: 'Siwis', audio: 'https://app.aitalker.io/music/lemonfox/tts-siwis-fr.mp3' },
+];
+
+// Hindi voices (api_type 3, shown only when language = 'hi')
+const LEMONFOX_HI_VOICES = [
+  { id: 'alpha', display: 'Alka', audio: 'https://app.aitalker.io/music/lemonfox/tts-alpha-hi.mp3' },
+  { id: 'beta',  display: 'Aditi',  audio: 'https://app.aitalker.io/music/lemonfox/tts-beta-hi.mp3' },
+  { id: 'omega', display: 'Rohit', audio: 'https://app.aitalker.io/music/lemonfox/tts-omega-hi.mp3' },
+  { id: 'psi',   display: 'Niraj',   audio: 'https://app.aitalker.io/music/lemonfox/tts-psi-hi.mp3' },
+];
+
+// Italian voices (api_type 3, shown only when language = 'it')
+const LEMONFOX_IT_VOICES = [
+  { id: 'sara',   display: 'Sara',   audio: 'https://app.aitalker.io/music/lemonfox/tts-sara-it.mp3' },
+  { id: 'nicola', display: 'Nicola', audio: 'https://app.aitalker.io/music/lemonfox/tts-nicola-it.mp3' },
+];
+
+// Portuguese (Brazil) voices (api_type 3, shown only when language = 'pt')
+const LEMONFOX_PT_VOICES = [
+  { id: 'clara', display: 'Clara', audio: 'https://app.aitalker.io/music/lemonfox/tts-clara-pt-br.mp3' },
+  { id: 'tiago', display: 'Tiago', audio: 'https://app.aitalker.io/music/lemonfox/tts-tiago-pt-br.mp3' },
+  { id: 'papai', display: 'Papai', audio: 'https://app.aitalker.io/music/lemonfox/tts-papai-pt-br.mp3' },
+];
+
+// Chinese voices (api_type 3, shown only when language = 'zh')
+const LEMONFOX_ZH_VOICES = [
+  { id: 'xiaobei',  display: 'Xiaobei',  audio: 'https://app.aitalker.io/music/lemonfox/tts-xiaobei-zh.mp3' },
+  { id: 'xiaoni',   display: 'Xiaoni',   audio: 'https://app.aitalker.io/music/lemonfox/tts-xiaoni-zh.mp3' },
+  { id: 'xiaoxiao', display: 'Xiaoxiao', audio: 'https://app.aitalker.io/music/lemonfox/tts-xiaoxiao-zh.mp3' },
+  { id: 'xiaoyi',   display: 'Xiaoyi',   audio: 'https://app.aitalker.io/music/lemonfox/tts-xiaoyi-zh.mp3' },
+  { id: 'yunjian',  display: 'Yunjian',  audio: 'https://app.aitalker.io/music/lemonfox/tts-yunjian-zh.mp3' },
+  { id: 'yunxi',    display: 'Yunxi',    audio: 'https://app.aitalker.io/music/lemonfox/tts-yunxi-zh.mp3' },
+  { id: 'yunxia',   display: 'Yunxia',   audio: 'https://app.aitalker.io/music/lemonfox/tts-yunxia-zh.mp3' },
+  { id: 'yunyang',  display: 'Yunyang',  audio: 'https://app.aitalker.io/music/lemonfox/tts-yunyang-zh.mp3' },
+];
+
+// Japanese voices (api_type 3, shown only when language = 'ja')
+const LEMONFOX_JA_VOICES = [
+  { id: 'sakura',    display: 'Sakura',    audio: 'https://app.aitalker.io/music/lemonfox/tts-sakura-ja.mp3' },
+  { id: 'gongitsune',display: 'Gongitsune',audio: 'https://app.aitalker.io/music/lemonfox/tts-gongitsune-ja.mp3' },
+  { id: 'nezumi',    display: 'Nezumi',    audio: 'https://app.aitalker.io/music/lemonfox/tts-nezumi-ja.mp3' },
+  { id: 'tebukuro',  display: 'Tebukuro',  audio: 'https://app.aitalker.io/music/lemonfox/tts-tebukuro-ja.mp3' },
+  { id: 'kumo',      display: 'Kumo',      audio: 'https://app.aitalker.io/music/lemonfox/tts-kumo-ja.mp3' },
+];
+
+const LEMONFOX_IDS = new Set([
+  ...LEMONFOX_VOICES, ...LEMONFOX_JA_VOICES, ...LEMONFOX_ZH_VOICES,
+  ...LEMONFOX_ES_VOICES, ...LEMONFOX_FR_VOICES, ...LEMONFOX_HI_VOICES,
+  ...LEMONFOX_IT_VOICES, ...LEMONFOX_PT_VOICES,
+].map(v => v.id));
+
+const LEMONFOX_VOICE_CARDS = LEMONFOX_VOICES.map(v => ({
+  id:          `lf_${v.id}`,
+  name:        v.display,
+  type:        'lemonfox',
+  description: '',
+  audio:       v.audio,
+}));
+
+const LEMONFOX_JA_VOICE_CARDS = LEMONFOX_JA_VOICES.map(v => ({
+  id:          `lf_${v.id}`,
+  name:        v.display,
+  type:        'lemonfox',
+  description: '',
+  audio:       v.audio,
+}));
+
+const LEMONFOX_ZH_VOICE_CARDS = LEMONFOX_ZH_VOICES.map(v => ({
+  id:          `lf_${v.id}`,
+  name:        v.display,
+  type:        'lemonfox',
+  description: '',
+  audio:       v.audio,
+}));
+
+const toCards = (list) => list.map(v => ({ id: `lf_${v.id}`, name: v.display, type: 'lemonfox', description: '', audio: v.audio }));
+const LEMONFOX_ES_VOICE_CARDS = toCards(LEMONFOX_ES_VOICES);
+const LEMONFOX_FR_VOICE_CARDS = toCards(LEMONFOX_FR_VOICES);
+const LEMONFOX_HI_VOICE_CARDS = toCards(LEMONFOX_HI_VOICES);
+const LEMONFOX_IT_VOICE_CARDS = toCards(LEMONFOX_IT_VOICES);
+const LEMONFOX_PT_VOICE_CARDS = toCards(LEMONFOX_PT_VOICES);
+
+const EMOTION_TAGS = [
+  { tag: '<laugh>',   label: 'Laugh',   desc: 'Natural laughter',        emoji: '😄' },
+  { tag: '<chuckle>', label: 'Chuckle', desc: 'Light, subtle laughter',  emoji: '😊' },
+  { tag: '<sigh>',    label: 'Sigh',    desc: 'Exhaling with emotion',   emoji: '😔' },
+  { tag: '<cough>',   label: 'Cough',   desc: 'Clearing throat',         emoji: '🤧' },
+  { tag: '<sniffle>', label: 'Sniffle', desc: 'Subtle nasal sound',      emoji: '😤' },
+  { tag: '<groan>',   label: 'Groan',   desc: 'Low, grumbling sound',    emoji: '😩' },
+  { tag: '<yawn>',    label: 'Yawn',    desc: 'Tired exhale',            emoji: '🥱' },
+  { tag: '<gasp>',    label: 'Gasp',    desc: 'Sudden intake of breath', emoji: '😲' },
 ];
 
 // ─── VSL Script Selector ──────────────────────────────────────────────────────
@@ -163,7 +327,7 @@ function AdCopyScriptSelector({ onSelectScript }) {
 }
 
 // ─── Generation Overlay ───────────────────────────────────────────────────────
-// Reflects the real flow: data is saved & queued — audio is generated by cron.
+// Reflects the real flow: data is saved & queued - audio is generated by cron.
 const SAVE_STAGES = [
   { text: 'Saving your project…',     sub: 'Writing script and voice settings to the database', icon: Save      },
   { text: 'Applying voice settings…', sub: 'Locking in emotion, scene mode, and voice profile',  icon: Wand2     },
@@ -189,7 +353,7 @@ function GeneratingOverlay({ isVisible, onComplete }) {
         setStage(current);
         setTimeout(advance, intervals[current]);
       } else {
-        // All stages done — switch to queued confirmation card
+        // All stages done - switch to queued confirmation card
         setTimeout(() => setQueued(true), 600);
       }
     };
@@ -331,6 +495,23 @@ export default function CreateVoiceover() {
   const queryClient  = useQueryClient();
   const navigate     = useNavigate();
   const location     = useLocation();
+
+  // Plan-based Premium Voice access
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 5 * 60_000,
+  });
+  const hasPremiumAccess = (() => {
+    if (!currentUser) return false;
+    const addons  = (currentUser.addons && typeof currentUser.addons === 'object') ? currentUser.addons : {};
+    const plan    = (currentUser.base_plan || '').toUpperCase();
+    return (
+      plan === 'UNLIMITED' || plan === 'BUNDLE' || plan === 'ALLACCESS' ||
+      addons.UNLIMITED === true || addons.unlimited === true ||
+      addons.ALLACCESS === true || addons.allaccess === true
+    );
+  })();
   const [showGenerating, setShowGenerating] = useState(false);
 
   // Tracks the ID from step-1 create so step-2 does an UPDATE (prevents double-insert)
@@ -372,15 +553,35 @@ export default function CreateVoiceover() {
   const [isCustomEmotion, setIsCustomEmotion] = useState(false);
   const [customEmotion,   setCustomEmotion]   = useState('');
 
+  // Derived: true when the selected voice uses API Type 3 (LemonFox)
+  const isApiType3Voice = LEMONFOX_IDS.has(formData.voice_id);
+
+  // Auto-reset emotion to neutral when a type-3 voice is selected
+  useEffect(() => {
+    if (isApiType3Voice) {
+      setFormData(prev => ({ ...prev, emotion: 'neutral' }));
+      setIsCustomEmotion(false);
+      setCustomEmotion('');
+    }
+  }, [isApiType3Voice]); // eslint-disable-line
+
   // Background music toggle + volume
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [musicVolume,  setMusicVolume]  = useState(30);
+
+  // Emotion Voice Mode
+  const [emotionMode,      setEmotionMode]      = useState(false);
+  const [emotionVoice,     setEmotionVoice]     = useState('');
+  const [showTagsGuide,    setShowTagsGuide]    = useState(true);
+  const scriptAreaRef  = useRef(null);
+  const ttsPromiseRef  = useRef(null);
 
   const urlParams             = new URLSearchParams(window.location.search);
   const editId                = urlParams.get('id');
   const preselectedVoiceId    = urlParams.get('voiceId');
   const preselectedVoiceName  = urlParams.get('voiceName');
   const preselectedVoiceType  = urlParams.get('voiceType');
+  const preselectedVoiceUrl   = urlParams.get('voiceUrl');
 
   useEffect(() => {
     if (preselectedVoiceId && preselectedVoiceName && preselectedVoiceType) {
@@ -389,9 +590,10 @@ export default function CreateVoiceover() {
         voice_id:   preselectedVoiceId,
         voice_name: preselectedVoiceName,
         voice_type: preselectedVoiceType,
+        voice_url:  preselectedVoiceUrl || '',
       }));
     }
-  }, [preselectedVoiceId, preselectedVoiceName, preselectedVoiceType]);
+  }, [preselectedVoiceId, preselectedVoiceName, preselectedVoiceType, preselectedVoiceUrl]);
 
   // Pre-fill script passed from VSL / Ad Copy pages via sessionStorage
   useEffect(() => {
@@ -494,7 +696,43 @@ export default function CreateVoiceover() {
     }
   };
 
+  // Insert an emotion tag at the textarea cursor position
+  const insertEmotionTag = (tag) => {
+    const el = scriptAreaRef.current;
+    if (!el) {
+      setFormData(prev => ({ ...prev, script: prev.script + tag }));
+      return;
+    }
+    const start = el.selectionStart ?? el.value.length;
+    const end   = el.selectionEnd   ?? el.value.length;
+    const newVal = el.value.slice(0, start) + tag + el.value.slice(end);
+    setFormData(prev => ({ ...prev, script: newVal }));
+    // Restore cursor after the inserted tag
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + tag.length, start + tag.length);
+    });
+  };
+
+  const validateForm = ({ requireVoice = true } = {}) => {
+    if (!formData.title.trim()) {
+      toast.error('Please enter a project title.');
+      return false;
+    }
+    if (emotionMode) {
+      if (!emotionVoice) {
+        toast.error('Please select an Emotion Tags voice before generating.');
+        return false;
+      }
+    } else if (requireVoice && !formData.voice_id) {
+      toast.error('Please select a voice before continuing.');
+      return false;
+    }
+    return true;
+  };
+
   const generateVoiceover = async () => {
+    if (!validateForm()) return;
     if (!formData.script.trim()) {
       toast.error('Please enter a script before generating.');
       return;
@@ -503,20 +741,81 @@ export default function CreateVoiceover() {
       toast.error('Script is too short. Please enter at least a few words.');
       return;
     }
-    if (!formData.voice_id) {
-      toast.error('Please select a voice before generating.');
-      return;
-    }
-    if (musicEnabled && !formData.background_music) {
+    if (!emotionMode && musicEnabled && !formData.background_music) {
       toast.error('Please select a background music track or turn off the Background Music toggle.');
       return;
     }
+
+    // Agency sub-user credit validation (skip for UNLIMITED / BUNDLE / ALLACCESS)
+    const isAgencySubUser = !!currentUser?.agency_owner_id;
+    if (isAgencySubUser) {
+      const wordCount        = formData.script.trim().split(/\s+/).filter(Boolean).length;
+      const remainingCredits = parseInt(currentUser?.credits_balance) || 0;
+      if (wordCount > remainingCredits) {
+        toast.error(
+          `Not enough credits. This script needs ${wordCount} credits but you only have ${remainingCredits} remaining.`
+        );
+        return;
+      }
+    }
+
+    if (emotionMode) {
+      // Kick off emotion voice API in parallel with the overlay
+      ttsPromiseRef.current = apiClient.post('/voiceovers/generate-emotion', {
+        voice:  emotionVoice,
+        script: formData.script,
+      }).then(r => r.data.data);
+    }
+
     setShowGenerating(true);
-    await saveMutation.mutateAsync({ ...formData, status: 'pending' });
+    const savePayload = (() => {
+      if (emotionMode) {
+        const ev = EMOTION_VOICES.find(v => v.id === emotionVoice);
+        return { ...formData, status: 'pending', api_type: 2,
+          voice_id: emotionVoice,
+          voice_name: ev?.display || emotionVoice,
+          voice_url: ev?.audio || '' };
+      }
+      if (LEMONFOX_IDS.has(formData.voice_id)) {
+        const allLF = [...LEMONFOX_VOICES, ...LEMONFOX_JA_VOICES, ...LEMONFOX_ZH_VOICES,
+          ...LEMONFOX_ES_VOICES, ...LEMONFOX_FR_VOICES, ...LEMONFOX_HI_VOICES,
+          ...LEMONFOX_IT_VOICES, ...LEMONFOX_PT_VOICES];
+        const lv = allLF.find(v => v.id === formData.voice_id);
+        return { ...formData, status: 'pending', api_type: 3,
+          voice_name: lv?.display || formData.voice_id,
+          voice_url: lv?.audio || '' };
+      }
+      return { ...formData, status: 'pending' };
+    })();
+    await saveMutation.mutateAsync(savePayload);
+  };
+
+  const handleSaveDraft = () => {
+    if (!validateForm()) return;
+    saveMutation.mutate(formData, { onSuccess: () => toast.success('Draft saved successfully!') });
   };
 
   const handleGenerationComplete = async () => {
-    await saveMutation.mutateAsync({ ...formData, status: 'pending' });
+    const savePayload = (() => {
+      if (emotionMode) {
+        const ev = EMOTION_VOICES.find(v => v.id === emotionVoice);
+        return { ...formData, status: 'pending', api_type: 2,
+          voice_id: emotionVoice,
+          voice_name: ev?.display || emotionVoice,
+          voice_url: ev?.audio || '' };
+      }
+      if (LEMONFOX_IDS.has(formData.voice_id)) {
+        const allLF = [...LEMONFOX_VOICES, ...LEMONFOX_JA_VOICES, ...LEMONFOX_ZH_VOICES,
+          ...LEMONFOX_ES_VOICES, ...LEMONFOX_FR_VOICES, ...LEMONFOX_HI_VOICES,
+          ...LEMONFOX_IT_VOICES, ...LEMONFOX_PT_VOICES];
+        const lv = allLF.find(v => v.id === formData.voice_id);
+        return { ...formData, status: 'pending', api_type: 3,
+          voice_name: lv?.display || formData.voice_id,
+          voice_url: lv?.audio || '' };
+      }
+      return { ...formData, status: 'pending' };
+    })();
+    await saveMutation.mutateAsync(savePayload);
     try {
       const wordCount = formData.script
         ? formData.script.trim().split(/\s+/).filter(Boolean).length
@@ -529,7 +828,7 @@ export default function CreateVoiceover() {
     }
     // Force-refetch so VoiceoverList has fresh data immediately on mount
     await queryClient.refetchQueries({ queryKey: ['voiceovers'], type: 'all' });
-    toast.success('Voiceover queued — audio will be ready shortly!');
+    toast.success('Voiceover queued - audio will be ready shortly!');
     navigate(createPageUrl('VoiceoverList'));
   };
 
@@ -608,7 +907,46 @@ export default function CreateVoiceover() {
         {/* Section 2: Script */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <GlassCard className="p-6" hover={false}>
-            <SectionTitle icon={Keyboard} title="Your Script" subtitle="Write or generate your voiceover text" />
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
+                  <Keyboard className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Your Script</h3>
+                  <p className="text-sm text-slate-400">Write or generate your voiceover text</p>
+                </div>
+              </div>
+
+              {/* Emotion Tags toggle */}
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <button
+                  type="button"
+                  disabled={formData.language !== 'en'}
+                  onClick={() => {
+                    setEmotionMode(v => !v);
+                    setEmotionVoice('');
+                  }}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all',
+                    formData.language !== 'en'
+                      ? 'border-slate-700/50 bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                      : emotionMode
+                        ? 'border-violet-500 bg-violet-500/20 text-violet-200'
+                        : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-violet-500/50 hover:text-violet-300',
+                  )}
+                >
+                  <Zap className={cn('w-4 h-4', formData.language !== 'en' ? 'text-slate-600' : emotionMode ? 'text-violet-400' : 'text-slate-500')} />
+                  Emotion Tags
+                  {emotionMode && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/30 text-violet-300 uppercase tracking-wide">ON</span>
+                  )}
+                </button>
+                {formData.language !== 'en' && (
+                  <p className="text-[11px] text-slate-500">English only</p>
+                )}
+              </div>
+            </div>
 
             <div className="mb-6">
               <IconTabs
@@ -677,10 +1015,46 @@ export default function CreateVoiceover() {
               <AdCopyScriptSelector onSelectScript={(script) => setFormData(prev => ({ ...prev, script, script_source: 'ad' }))} />
             )}
 
+            {/* Emotion Tags Panel - shown when Emotion Voice Mode is on */}
+            {emotionMode && (
+              <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-violet-400" />
+                    <span className="text-sm font-medium text-violet-300">Emotion Tags</span>
+                    <span className="text-xs text-slate-500">- insert anywhere in your script</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTagsGuide(v => !v)}
+                    className="text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showTagsGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+                {showTagsGuide && (
+                  <div className="flex flex-wrap gap-2">
+                    {EMOTION_TAGS.map(t => (
+                      <button
+                        key={t.tag}
+                        type="button"
+                        onClick={() => insertEmotionTag(t.tag)}
+                        title={t.desc}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 hover:border-violet-500/50 hover:bg-violet-500/10 text-sm text-slate-300 hover:text-white transition-all"
+                      >
+                        <span>{t.emoji}</span> {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <Textarea
+              ref={scriptAreaRef}
               value={formData.script}
               onChange={(e) => setFormData(prev => ({ ...prev, script: e.target.value }))}
-              placeholder="Enter your script here... This text will be converted to speech."
+              placeholder={emotionMode ? 'Enter your script here… Use emotion tags above to add expressive sounds.' : 'Enter your script here... This text will be converted to speech.'}
               className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 min-h-[180px] text-base leading-relaxed"
             />
             <p className="text-xs text-slate-500 mt-2">{formData.script.length} characters</p>
@@ -690,12 +1064,57 @@ export default function CreateVoiceover() {
         {/* Section 3: Voice Selection */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <GlassCard className="p-6" hover={false}>
-            <SectionTitle icon={Volume2} title="Choose a Voice" subtitle="Browse and select from our voice library" />
-            <VoiceSelectionSection
-              selectedVoiceId={formData.voice_id}
-              onSelectVoice={(id, name, type, url) => setFormData(prev => ({ ...prev, voice_id: id, voice_name: name, voice_type: type, voice_url: url || '' }))}
-              initialTab={preselectedVoiceType === 'cloned' ? 'cloned' : preselectedVoiceType === 'custom' ? 'custom' : undefined}
-            />
+            <SectionTitle icon={Volume2} title="Choose a Voice" subtitle={emotionMode ? 'Emotion Tags Mode — expressive AI voices with emotion tags' : 'Browse and select from our voice library'} />
+
+            {emotionMode ? (
+              /* ── Emotion Voice Picker ── */
+              <div className="pt-2">
+                <p className="text-xs text-slate-500 mb-4">
+                  Select an expressive voice. Use emotion tags in your script (e.g. <code className="text-violet-400">&lt;laugh&gt;</code>, <code className="text-violet-400">&lt;sigh&gt;</code>) for natural-sounding speech.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {EMOTION_VOICE_CARDS.map(card => (
+                    <VoiceCard
+                      key={card.id}
+                      voice={card}
+                      selectedVoiceId={emotionVoice ? `emotion_${emotionVoice}` : ''}
+                      onSelectVoice={(cardId) => setEmotionVoice(cardId.replace('emotion_', ''))}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ── Standard Voice Library (emotion voices included in All tab) ── */
+              <VoiceSelectionSection
+                selectedVoiceId={
+                  EMOTION_VOICES.some(v => v.id === formData.voice_id)
+                    ? `emotion_${formData.voice_id}`
+                    : LEMONFOX_IDS.has(formData.voice_id)
+                      ? `lf_${formData.voice_id}`
+                      : formData.voice_id
+                }
+                onSelectVoice={(id, name, type, url) => {
+                  const baseId = id.startsWith('emotion_') ? id.replace('emotion_', '')
+                    : id.startsWith('lf_') ? id.replace('lf_', '')
+                    : id;
+                  setFormData(prev => ({ ...prev, voice_id: baseId, voice_name: name, voice_type: type, voice_url: url || '' }));
+                }}
+                extraVoices={formData.language === 'en' ? EMOTION_VOICE_CARDS : []}
+                premiumVoices={
+                  formData.language === 'en' ? LEMONFOX_VOICE_CARDS :
+                  formData.language === 'ja' ? LEMONFOX_JA_VOICE_CARDS :
+                  formData.language === 'zh' ? LEMONFOX_ZH_VOICE_CARDS :
+                  formData.language === 'es' ? LEMONFOX_ES_VOICE_CARDS :
+                  formData.language === 'fr' ? LEMONFOX_FR_VOICE_CARDS :
+                  formData.language === 'hi' ? LEMONFOX_HI_VOICE_CARDS :
+                  formData.language === 'it' ? LEMONFOX_IT_VOICE_CARDS :
+                  formData.language === 'pt' ? LEMONFOX_PT_VOICE_CARDS :
+                  []
+                }
+                initialTab={preselectedVoiceType === 'cloned' ? 'cloned' : preselectedVoiceType === 'custom' ? 'custom' : undefined}
+                hasPremiumAccess={hasPremiumAccess}
+              />
+            )}
           </GlassCard>
         </motion.div>
 
@@ -707,9 +1126,28 @@ export default function CreateVoiceover() {
             <div className="space-y-8">
 
               {/* Language */}
-              <div>
+              <div className={emotionMode ? 'opacity-40 pointer-events-none select-none' : ''}>
                 <Label className="text-slate-300 mb-2 block">Language</Label>
-                <Select value={formData.language} onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}>
+                <Select
+                  value={formData.language}
+                  onValueChange={(value) => {
+                    setFormData(prev => {
+                      const langVoiceMap = { ja: LEMONFOX_JA_VOICES, zh: LEMONFOX_ZH_VOICES, es: LEMONFOX_ES_VOICES, fr: LEMONFOX_FR_VOICES, hi: LEMONFOX_HI_VOICES, it: LEMONFOX_IT_VOICES, pt: LEMONFOX_PT_VOICES };
+                      const isEnOnly = LEMONFOX_VOICES.some(v => v.id === prev.voice_id) || EMOTION_VOICES.some(v => v.id === prev.voice_id);
+                      const langOfSelected = Object.entries(langVoiceMap).find(([, list]) => list.some(v => v.id === prev.voice_id))?.[0];
+                      const shouldClear = (isEnOnly && value !== 'en') || (langOfSelected && value !== langOfSelected);
+                      return {
+                        ...prev,
+                        language: value,
+                        ...(shouldClear ? { voice_id: '', voice_name: '', voice_url: '' } : {}),
+                      };
+                    });
+                    if (value !== 'en') {
+                      setEmotionMode(false);
+                      setEmotionVoice('');
+                    }
+                  }}
+                >
                   <SelectTrigger className="h-12 bg-slate-800/50 border-slate-700">
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
@@ -722,10 +1160,11 @@ export default function CreateVoiceover() {
               </div>
 
               {/* Emotion */}
-              <div className={formData.language !== 'en' ? 'opacity-40 pointer-events-none select-none' : ''}>
+              <div className={emotionMode || formData.language !== 'en' || isApiType3Voice ? 'opacity-40 pointer-events-none select-none' : ''}>
                 <Label className="text-slate-300 mb-3 block">
                   Emotion
                   {formData.language !== 'en' && <span className="ml-2 text-xs text-slate-500">(English only)</span>}
+                  {isApiType3Voice && <span className="ml-2 text-xs text-slate-500">(Not available for this voice)</span>}
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {emotions.map(emotion => (
@@ -814,7 +1253,7 @@ export default function CreateVoiceover() {
               </div>
 
               {/* Scene Mode */}
-              <div className={formData.language !== 'en' ? 'opacity-40 pointer-events-none select-none' : ''}>
+              <div className={emotionMode || formData.language !== 'en' ? 'opacity-40 pointer-events-none select-none' : ''}>
                 <Label className="text-slate-300 mb-3 block">
                   Scene Mode
                   {formData.language !== 'en' && <span className="ml-2 text-xs text-slate-500">(English only)</span>}
@@ -885,7 +1324,7 @@ export default function CreateVoiceover() {
                   className="overflow-hidden"
                 >
                   <div className="mt-6 pt-6 border-t border-slate-700/50 space-y-4">
-                    {/* Volume slider — only shown once a track is selected */}
+                    {/* Volume slider - only shown once a track is selected */}
                     <AnimatePresence>
                       {formData.background_music && (
                         <motion.div
@@ -927,7 +1366,7 @@ export default function CreateVoiceover() {
               <AudioLines className="w-5 h-5 mr-2" /> Generate Voiceover
             </Button>
             <Button
-              onClick={() => saveMutation.mutate(formData, { onSuccess: () => toast.success('Draft saved successfully!') })}
+              onClick={handleSaveDraft}
               variant="outline"
               className="sm:w-auto border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 h-14 px-8"
             >

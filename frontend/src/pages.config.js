@@ -48,12 +48,16 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AdCopyList from './pages/AdCopyList';
+import Bonuses from './pages/Bonuses';
+import BonusesNew from './pages/BonusesNew';
+import MegaBundle from './pages/MegaBundle';
 import AudiobookCreator from './pages/AudiobookCreator';
 import AudiobookList from './pages/AudiobookList';
 import BrandStudio from './pages/BrandStudio';
 import BrandStudioEdit from './pages/BrandStudioEdit';
 import BrandStudioList from './pages/BrandStudioList';
 import Agency from './pages/Agency';
+import ApiPage from './pages/ApiPage';
 import AudioMixer from './pages/AudioMixer';
 import Billing from './pages/Billing';
 import CloneList from './pages/CloneList';
@@ -66,6 +70,7 @@ import CreateVSL from './pages/CreateVSL';
 import CreateVoiceover from './pages/CreateVoiceover';
 import CustomVoiceList from './pages/CustomVoiceList';
 import DFYOffers from './pages/DFYOffers';
+import RevenueCalculator from './pages/RevenueCalculator';
 import GettingStarted from './pages/GettingStarted';
 import GigCreator from './pages/GigCreator';
 import JobFinder from './pages/JobFinder';
@@ -84,9 +89,13 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "AdCopyList": AdCopyList,
+    "Bonuses": Bonuses,
+    "BonusesNew": BonusesNew,
+    "MegaBundle": MegaBundle,
     "AudiobookCreator": AudiobookCreator,
     "AudiobookList": AudiobookList,
     "Agency": Agency,
+    "ApiPage": ApiPage,
     "AudioMixer": AudioMixer,
     "Billing": Billing,
     "CloneList": CloneList,
@@ -102,6 +111,7 @@ export const PAGES = {
     "BrandStudioEdit": BrandStudioEdit,
     "BrandStudioList": BrandStudioList,
     "DFYOffers": DFYOffers,
+    "RevenueCalculator": RevenueCalculator,
     "GettingStarted": GettingStarted,
     "GigCreator": GigCreator,
     "JobFinder": JobFinder,

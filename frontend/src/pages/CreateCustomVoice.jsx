@@ -6,7 +6,7 @@ import { useUsageLimits } from '@/hooks/useUsageLimits';
 import { createPageUrl } from '@/utils';
 import {
   Sparkles, Save, Loader2, AlertTriangle, HelpCircle,
-  Copy, Check, Wand2, Volume2, XCircle,
+  Copy, Check, Wand2, Volume2, XCircle, User, Wand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -438,6 +438,7 @@ export default function CreateCustomVoice() {
   const navigate = useNavigate();
   const { checkLimit } = useUsageLimits();
   const customLimit = checkLimit('custom');
+  const [voiceType,    setVoiceType]    = useState('fantasy'); // 'human' | 'fantasy'
   const [showHelp,     setShowHelp]     = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [preview,      setPreview]      = useState(null); // { output_url, job_id }
@@ -471,20 +472,38 @@ export default function CreateCustomVoice() {
     },
   });
 
-  // Step 1 — Generate: call TTS API and show preview player
+  // Step 1 — Generate: call appropriate API based on voiceType
   const generateVoice = async () => {
     if (!customLimit.allowed) return;
     setIsGenerating(true);
     setPreview(null);
     setGenError(null);
     try {
-      const ttsResult = await base44.customVoices.generate({
-        description: formData.description,
-        tone:        formData.tone,
-        style:       formData.style,
-        use_case:    formData.use_case,
-        test_script: formData.test_script,
-      });
+      let ttsResult;
+      if (voiceType === 'fantasy') {
+        // Check queue status before proceeding
+        const queue = await base44.customVoices.checkQueueStatus();
+        if (queue.pending > 1) {
+          setGenError("We're experiencing high demand right now. Please try again shortly — your patience is appreciated.");
+          return;
+        }
+        ttsResult = await base44.customVoices.generate({
+          description: formData.description,
+          tone:        formData.tone,
+          style:       formData.style,
+          use_case:    formData.use_case,
+          test_script: formData.test_script,
+        });
+      } else {
+        // Human Voice API — details to be provided
+        ttsResult = await base44.customVoices.generateHuman({
+          description: formData.description,
+          tone:        formData.tone,
+          style:       formData.style,
+          use_case:    formData.use_case,
+          test_script: formData.test_script,
+        });
+      }
       setPreview(ttsResult); // { output_url, job_id }
     } catch (err) {
       setGenError(err?.response?.data?.message || 'Voice generation failed. Please try again.');
@@ -520,6 +539,78 @@ export default function CreateCustomVoice() {
           backTo="CustomVoiceList"
           gradient="from-amber-500 to-orange-500"
         />
+
+        {/* ── Voice Type Selector ── */}
+        <GlassCard className="p-5" hover={false}>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Select Voice Type</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              {
+                value: 'human',
+                label: 'Human Voice',
+                desc: 'Craft realistic, natural-sounding human voices. Perfect for narration, ads, and professional content.',
+                examples: ['Male voice', 'Female voice', 'Young adult', 'Deep narrator', 'Soft feminine', 'Authoritative male'],
+                icon: User,
+                gradient: 'from-blue-500 to-cyan-500',
+                activeBorder: 'border-blue-500',
+                activeBg: 'bg-blue-500/10',
+                activeText: 'text-blue-400',
+                activeDot: 'bg-blue-400',
+                tagStyle: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+              },
+              {
+                value: 'fantasy',
+                label: 'Fantasy Voice',
+                desc: 'Generate imaginative, character-driven voices for animations, games, and creative projects.',
+                examples: ['Baby voice', 'Ghost voice', 'Cartoon character', 'Villain voice', 'Fairy tale', 'Robot voice'],
+                icon: Wand,
+                gradient: 'from-amber-500 to-orange-500',
+                activeBorder: 'border-amber-500',
+                activeBg: 'bg-amber-500/10',
+                activeText: 'text-amber-400',
+                activeDot: 'bg-amber-400',
+                tagStyle: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+              },
+            ].map((opt) => {
+              const active = voiceType === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { setVoiceType(opt.value); setPreview(null); setGenError(null); }}
+                  className={cn(
+                    'relative text-left p-4 rounded-2xl border-2 transition-all duration-200',
+                    active
+                      ? `${opt.activeBorder} ${opt.activeBg}`
+                      : 'border-slate-700/60 bg-slate-800/30 hover:border-slate-600 hover:bg-slate-800/60'
+                  )}
+                >
+                  {/* Active indicator */}
+                  {active && (
+                    <span className={cn('absolute top-3 right-3 w-2 h-2 rounded-full', opt.activeDot)} />
+                  )}
+                  <div className={cn(
+                    'w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-gradient-to-br',
+                    active ? opt.gradient : 'from-slate-700 to-slate-600'
+                  )}>
+                    <opt.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <p className={cn('text-sm font-semibold mb-1', active ? opt.activeText : 'text-slate-300')}>
+                    {opt.label}
+                  </p>
+                  <p className="text-xs text-slate-500 leading-relaxed mb-3">{opt.desc}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {opt.examples.map(ex => (
+                      <span key={ex} className={cn('text-[10px] px-2 py-0.5 rounded-full border', opt.tagStyle)}>
+                        {ex}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </GlassCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}

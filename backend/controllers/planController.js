@@ -69,6 +69,23 @@ export const trackUsage = async (req, res) => {
       [userId, monthYear, increment, nowIso, nowIso, increment]
     );
 
+    // For agency sub-users tracking credits: validate balance then decrement
+    if (feature === 'credits' && req.user.agency_owner_id) {
+      const [[userRow]] = await db.query('SELECT credits_balance FROM users WHERE id = ?', [userId]);
+      const remaining = parseInt(userRow?.credits_balance) || 0;
+      if (remaining < increment) {
+        return errorResponse(
+          res,
+          `Insufficient credits. You need ${increment} credits but only have ${remaining} remaining.`,
+          400
+        );
+      }
+      await db.query(
+        'UPDATE users SET credits_balance = credits_balance - ?, updated_at = NOW() WHERE id = ?',
+        [increment, userId]
+      );
+    }
+
     // Return updated usage row
     const [rows] = await db.query(
       'SELECT * FROM user_usage_monthly WHERE user_id = ? AND month_year = ?',

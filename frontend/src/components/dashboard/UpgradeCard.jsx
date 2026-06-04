@@ -94,6 +94,7 @@ export default function UpgradeCard({ compact = false, currentPlan, addons, isAg
     ? 'Unlock every feature with no limits'
     : 'Get unlimited voiceover credits';
   const badgeText          = upgradeToAllAccess ? 'ALLACCESS' : 'UNLIMITED';
+  const salesUrl           = upgradeToAllAccess ? null : 'https://aitalker.io/unlimited-v3';
   const benefits           = upgradeToAllAccess ? allaccessBenefits : unlimitedBenefits;
 
   const iconGradient  = upgradeToAllAccess ? 'from-emerald-400 to-teal-500'   : 'from-amber-400 to-orange-500';
@@ -117,11 +118,20 @@ export default function UpgradeCard({ compact = false, currentPlan, addons, isAg
             <h3 className="text-lg font-semibold text-white">{upgradeTitle}</h3>
             <p className="text-sm text-slate-400 truncate">{upgradeDescription}</p>
           </div>
-          <Link to={createPageUrl('Billing')}>
-            <Button className={`bg-gradient-to-r ${btnGradient} shrink-0`}>
+          {salesUrl ? (
+            <Button
+              onClick={() => window.open(salesUrl, '_blank', 'noopener,noreferrer')}
+              className={`bg-gradient-to-r ${btnGradient} shrink-0`}
+            >
               Upgrade <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
-          </Link>
+          ) : (
+            <Link to={createPageUrl('Billing')}>
+              <Button className={`bg-gradient-to-r ${btnGradient} shrink-0`}>
+                Upgrade <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          )}
         </div>
       </GlassCard>
     );
@@ -176,12 +186,22 @@ export default function UpgradeCard({ compact = false, currentPlan, addons, isAg
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to={createPageUrl('Billing')} className="flex-1">
-            <Button className={`w-full bg-gradient-to-r ${btnGradient} h-11 text-base font-semibold shadow-lg`}>
+          {salesUrl ? (
+            <Button
+              onClick={() => window.open(salesUrl, '_blank', 'noopener,noreferrer')}
+              className={`flex-1 bg-gradient-to-r ${btnGradient} h-11 text-base font-semibold shadow-lg`}
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               Upgrade Now
             </Button>
-          </Link>
+          ) : (
+            <Link to={createPageUrl('Billing')} className="flex-1">
+              <Button className={`w-full bg-gradient-to-r ${btnGradient} h-11 text-base font-semibold shadow-lg`}>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Upgrade Now
+              </Button>
+            </Link>
+          )}
           <Link to={createPageUrl('Billing')}>
             <Button variant="outline" className="border-slate-700 hover:bg-slate-800">
               View Billing

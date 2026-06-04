@@ -115,15 +115,21 @@ export default function Dashboard() {
   // Agency sub-users have a personal credit allocation instead of a plan-level limit
   const isAgencySubUser = !!currentUser?.agency_owner_id;
 
-  const plan = (effectivePlan || '').toUpperCase();
+  // For agency sub-users, show "Agency" as plan — not the inherited admin plan
+  const plan = isAgencySubUser ? 'AGENCY' : (effectivePlan || '').toUpperCase();
 
-  // BUNDLE/ALLACCESS — fully unlimited, no plan_limits check needed
-  const isBundle       = plan === 'BUNDLE' || plan === 'ALLACCESS';
+  // BUNDLE/ALLACCESS — fully unlimited; agency sub-users are NEVER treated as bundle
+  const isBundle = !isAgencySubUser && (plan === 'BUNDLE' || plan === 'ALLACCESS');
   // -1 in plan_limits means unlimited
   const unlimitedLimit = (val) => (val === -1 || val === null) ? -1 : val;
 
+  // Agency sub-user credit limit: credits_balance (remaining) + credits used = total allocated
+  const agencyCreditsTotal = isAgencySubUser
+    ? (parseInt(currentUser?.credits_balance) || 0) + (usage.credits_used || 0)
+    : null;
+
   // Feature-specific addon flags
-  const addonsRaw2        = currentUser?.addons ?? {};
+  const addonsRaw2          = currentUser?.addons ?? {};
   const hasAddonVSL         = addonsRaw2.vsl          === true || addonsRaw2.VSL          === true;
   const hasAddonAd          = addonsRaw2.ad            === true || addonsRaw2.AD            === true;
   const hasAddonVoiceCloner = addonsRaw2.voicecloner   === true || addonsRaw2.VOICECLONER   === true;
@@ -137,7 +143,8 @@ export default function Dashboard() {
 
   // Build usage data for cards
   const usageCounts = {
-    credits:        { used: usage.credits_used,         limit: isBundle ? -1 : unlimitedLimit(limits.credits) },
+    // Agency sub-users: use their allocated total; others: plan-based limit
+    credits:        { used: usage.credits_used,         limit: isAgencySubUser ? agencyCreditsTotal : (isBundle ? -1 : unlimitedLimit(limits.credits)) },
     clones:         { used: usage.clones_used,          limit: addonLim(hasAddonVoiceCloner, limits.clones) },
     brand_studio:   { used: usage.brand_studio_used,    limit: isBundle ? -1 : unlimitedLimit(limits.brand_studio) },
     vsl:            { used: usage.vsl_used,             limit: addonLim(hasAddonVSL, limits.vsl) },

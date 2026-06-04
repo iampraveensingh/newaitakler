@@ -104,12 +104,16 @@ export default function AddonUpgradeCard({ type, addons, currentPlan }) {
   const config = addonConfig[type];
   if (!config) return null;
 
-  // ALLACCESS / UNLIMITED plans include everything — no upgrade card needed
+  // BUNDLE / ALLACCESS plans include everything — no upgrade card needed
   const plan = (currentPlan || '').toUpperCase();
-  if (plan === 'ALLACCESS' || plan === 'UNLIMITED') return null;
+  if (plan === 'BUNDLE' || plan === 'ALLACCESS') return null;
 
   // addons is an object like { vsl: true, ad: true }
   const addonsObj = (addons && typeof addons === 'object' && !Array.isArray(addons)) ? addons : {};
+
+  // ALLACCESS addon also unlocks everything
+  if (addonsObj.ALLACCESS === true || addonsObj.allaccess === true) return null;
+
   const hasAddon = config.addonKeys.some(k => addonsObj[k] === true);
 
   if (hasAddon) return null;

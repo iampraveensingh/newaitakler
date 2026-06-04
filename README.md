@@ -1,4 +1,4 @@
-# Expressive Voice — Base44 → Express + MySQL Migration
+# AI Talker — Base44 → Express + MySQL Migration
 
 Complete professional migration: Base44 removed, UI preserved 100%, fresh Express + MySQL2 backend.
 

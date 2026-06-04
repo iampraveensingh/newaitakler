@@ -46,6 +46,7 @@ const addonDefinitions = {
     icon: FileText,
     color: 'from-emerald-500 via-teal-500 to-cyan-500',
     shadow: 'shadow-emerald-500/30',
+    salesUrl: 'https://aitalker.io/pro-vsl-script-writer-v3',
     features: [
       'Unlimited VSL scripts',
       'Advanced frameworks',
@@ -61,6 +62,7 @@ const addonDefinitions = {
     icon: PenTool,
     color: 'from-amber-500 via-orange-500 to-red-500',
     shadow: 'shadow-amber-500/30',
+    salesUrl: 'https://aitalker.io/ai-ad-copy-creator',
     features: [
       'Unlimited ad copies',
       'All platform templates',
@@ -76,6 +78,7 @@ const addonDefinitions = {
     icon: Video,
     color: 'from-emerald-500 via-teal-500 to-cyan-500',
     shadow: 'shadow-emerald-500/30',
+    salesUrl: 'https://aitalker.io/ai-transciber',
     features: [
       'Unlimited transcriptions',
       'All output formats',
@@ -91,6 +94,7 @@ const addonDefinitions = {
     icon: Users,
     color: 'from-blue-500 via-indigo-500 to-violet-500',
     shadow: 'shadow-blue-500/30',
+    salesUrl: 'https://aitalker.io/agency-kit',
     features: [
       'Unlimited team members',
       'Client workspaces',
@@ -156,7 +160,7 @@ export default function Billing() {
   const usage      = monthlyUsage?.[0] || {};
 
   const isBundle        = basePlan === 'BUNDLE';
-  const isFullyUnlocked = isBundle;
+  const isFullyUnlocked = isBundle || basePlan === 'ALLACCESS' || hasAllAccessAddon;
 
   const planInfo = PLAN_DISPLAY[basePlan] || { label: basePlan, color: 'from-slate-500 to-slate-600' };
 
@@ -397,7 +401,10 @@ export default function Billing() {
                       <span className="text-slate-400">/month</span>
                     </div>
                     <p className="text-emerald-400 text-sm mb-6">Cancel anytime</p>
-                    <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:via-orange-400 hover:to-rose-400 shadow-xl shadow-orange-500/30">
+                    <Button
+                      onClick={() => window.open('https://aitalker.io/bundle-live', '_blank', 'noopener,noreferrer')}
+                      className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:via-orange-400 hover:to-rose-400 shadow-xl shadow-orange-500/30"
+                    >
                       <Sparkles className="w-5 h-5 mr-2" />
                       Upgrade to Unlimited
                     </Button>
@@ -498,7 +505,10 @@ export default function Billing() {
                         Already Owned
                       </Button>
                     ) : (
-                      <Button className={cn("w-full bg-gradient-to-r group/btn", addon.color)}>
+                      <Button
+                        onClick={() => window.open(addon.salesUrl, '_blank', 'noopener,noreferrer')}
+                        className={cn("w-full bg-gradient-to-r group/btn", addon.color)}
+                      >
                         <span>Get {addon.name}</span>
                         <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                       </Button>

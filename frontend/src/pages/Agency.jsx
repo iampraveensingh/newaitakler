@@ -327,7 +327,10 @@ export default function Agency() {
                 </div>
               ))}
             </div>
-            <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 h-12 px-8 text-base font-semibold shadow-lg shadow-amber-500/25">
+            <Button
+              onClick={() => window.open('https://aitalker.io/agency-kit', '_blank', 'noopener,noreferrer')}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 h-12 px-8 text-base font-semibold shadow-lg shadow-amber-500/25"
+            >
               <Crown className="w-5 h-5 mr-2" /> Upgrade to Agency
             </Button>
           </div>

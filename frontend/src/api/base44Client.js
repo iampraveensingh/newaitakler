@@ -258,6 +258,27 @@ export const notifications = {
   },
 };
 
+// ─── API KEYS ─────────────────────────────────────────────────────────────────
+
+export const apiKeyApi = {
+  get: async () => {
+    const { data } = await apiClient.get('/api-keys');
+    return data.data;
+  },
+  generate: async () => {
+    const { data } = await apiClient.post('/api-keys/generate');
+    return data.data;
+  },
+  revoke: async () => {
+    const { data } = await apiClient.delete('/api-keys');
+    return data.data;
+  },
+  getLogs: async (limit = 50) => {
+    const { data } = await apiClient.get('/api-keys/logs', { params: { limit } });
+    return data.data;
+  },
+};
+
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
 
 export const adminApi = {
@@ -270,8 +291,18 @@ export const adminApi = {
 // ─── CUSTOM VOICES ───────────────────────────────────────────────────────────
 
 export const customVoices = {
+  checkQueueStatus: async () => {
+    const { data } = await apiClient.get('/custom-voices/queue-status');
+    return data.data; // { running, pending }
+  },
   generate: async ({ description, tone, style, use_case, test_script }) => {
     const { data } = await apiClient.post('/custom-voices/generate', {
+      description, tone, style, use_case, test_script,
+    });
+    return data.data; // { job_id, output_url }
+  },
+  generateHuman: async ({ description, tone, style, use_case, test_script }) => {
+    const { data } = await apiClient.post('/custom-voices/generate-human', {
       description, tone, style, use_case, test_script,
     });
     return data.data; // { job_id, output_url }
@@ -335,6 +366,7 @@ export const base44 = {
   uploads,
   agency,
   adminApi,
+  apiKeyApi,
   notifications,
   systemVoices,
   customVoices,

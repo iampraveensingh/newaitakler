@@ -6,7 +6,7 @@ import { createEntityController } from '../controllers/entityController.js';
 const router = Router();
 
 const FIELDS = [
-  'name', 'description', 'language', 'gender', 'clone_mode',
+  'name', 'description', 'script', 'language', 'gender', 'clone_mode',
   'is_public', 'sample_url', 'audio_url', 'source_type', 'status',
   'quality_score', 'is_favorite',
 ];

@@ -11,7 +11,7 @@ const DEEPSEEK_MODEL   = 'deepseek-chat';
  * @param {string}  userPrompt
  * @param {object}  [opts]  { maxTokens, temperature, jsonMode }
  */
-async function callDeepSeek(systemPrompt, userPrompt, { maxTokens = 4000, temperature = 0.7, jsonMode = false } = {}) {
+export async function callDeepSeek(systemPrompt, userPrompt, { maxTokens = 4000, temperature = 0.7, jsonMode = false } = {}) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DEEPSEEK_API_KEY is not configured.');
 
@@ -175,7 +175,7 @@ emotion: the primary emotional tone conveyed (e.g. "Excited", "Trustworthy", "In
 tone: describe the writing/voice tone (e.g. "Bold", "Professional", "Friendly", "Authoritative").
 content_summary: 2–3 sentence plain-English summary of what the brand does, who it serves, and its key value proposition.
 speaker_style: a short label describing the ideal voice narrator (e.g. "Confident, energetic male narrator with authoritative warmth").
-voice_prompt: a detailed 2–3 sentence voice direction describing pace, energy, pauses, delivery style, and emotional feel — as if briefing a voice actor.
+voice_prompt: a 2–3 sentence TTS voice description following this exact structure — (1) start with gender (Male/Female), age range (e.g. "young adult in their late 20s", "middle-aged"), pitch (high/medium/low), pace (fast/medium/slow), and primary emotion; (2) add 2–3 voice characteristics (e.g. "warm, magnetic, crisp, rich, soothing, powerful"); (3) end with the ideal use case for this brand. Example: "A confident male voice in his mid-30s, medium pitch and steady pace, with a calm and authoritative tone. Warm, magnetic, and rich in quality — purposeful without being aggressive. Ideal for professional service brands, VSL narration, and trust-building campaigns."
 vsl_sections.hook: the opening hook paragraph of the VSL (1–2 sentences that grab attention).
 vsl_sections.body: the middle story/proof section (several sentences building desire).
 vsl_sections.cta: the closing call-to-action paragraph.
@@ -232,7 +232,7 @@ function buildMockBrandData(title, url) {
       tagline:         'Empowering your success',
       content_summary: `${brand} is a professional platform dedicated to helping businesses and entrepreneurs achieve their goals. It offers proven solutions designed to streamline operations and drive measurable results. The brand targets ambitious professionals looking for reliable, expert-backed support.`,
       speaker_style:   'Confident, professional narrator with warm authority',
-      voice_prompt:    `Deliver this script with steady confidence and a calm sense of authority. Keep a measured pace — pause briefly after key statements to let them land. The tone should feel like a trusted advisor speaking directly to the listener, not a salesperson. Warm but purposeful throughout.`,
+      voice_prompt:    `A confident male voice in his mid-30s, medium pitch and steady pace, with a calm and authoritative tone. Warm, magnetic, and rich in quality — purposeful without being aggressive. Ideal for professional service brands, VSL narration, and trust-building campaigns.`,
       key_messages: [
         'Quality solutions tailored to your needs',
         'Proven results you can rely on',

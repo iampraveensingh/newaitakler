@@ -4,31 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import {
   BookOpen, ArrowLeft, CheckCircle2, Mic, Music2, PenTool,
-  Video, Download, Users, LayoutDashboard, ChevronDown, Sparkles, LogIn
+  Video, Download, Users, LayoutDashboard, ChevronDown, Sparkles
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 
 const steps = [
   {
-    id: 'login',
-    step: '01',
-    title: 'Log In to Your Account',
-    icon: LogIn,
-    color: 'from-slate-500 to-slate-600',
-    accent: 'text-slate-400',
-    ring: 'ring-slate-500/30',
-    tasks: [
-      'Visit the Expressive Voice App login page.',
-      'Enter your ProWebVentures username and password — the same credentials used for the support portal.',
-      'Click Sign In. You will be redirected to your Dashboard.',
-      'Forgot your password? Click "Forgot Password?" on the login page to receive a reset link by email.',
-    ],
-    tip: 'Your support portal login and members dashboard login are identical — no separate accounts needed.',
-  },
-  {
     id: 'dashboard',
-    step: '02',
+    step: '01',
     title: 'Understand Your Dashboard',
     icon: LayoutDashboard,
     color: 'from-blue-500 to-cyan-600',
@@ -44,7 +28,7 @@ const steps = [
   },
   {
     id: 'voiceover',
-    step: '03',
+    step: '02',
     title: 'Create Your First Voiceover',
     icon: Mic,
     color: 'from-violet-500 to-purple-600',
@@ -61,7 +45,7 @@ const steps = [
   },
   {
     id: 'voice-features',
-    step: '04',
+    step: '03',
     title: 'Explore AI Voice Features',
     icon: Sparkles,
     color: 'from-pink-500 to-rose-600',
@@ -77,7 +61,7 @@ const steps = [
   },
   {
     id: 'audio-mixer',
-    step: '05',
+    step: '04',
     title: 'Mix Voiceovers with Background Music',
     icon: Music2,
     color: 'from-emerald-500 to-teal-600',
@@ -95,7 +79,7 @@ const steps = [
   },
   {
     id: 'copy-creator',
-    step: '06',
+    step: '05',
     title: 'Generate Marketing Copy',
     icon: PenTool,
     color: 'from-amber-500 to-orange-600',
@@ -111,7 +95,7 @@ const steps = [
   },
   {
     id: 'transcribe',
-    step: '07',
+    step: '06',
     title: 'Transcribe Audio & Video',
     icon: Video,
     color: 'from-indigo-500 to-violet-600',
@@ -127,7 +111,7 @@ const steps = [
   },
   {
     id: 'export',
-    step: '08',
+    step: '07',
     title: 'Download & Export Your Work',
     icon: Download,
     color: 'from-cyan-500 to-blue-600',
@@ -144,7 +128,7 @@ const steps = [
   },
   {
     id: 'agency',
-    step: '09',
+    step: '08',
     title: 'Manage Your Agency & Team',
     icon: Users,
     color: 'from-rose-500 to-pink-600',
@@ -169,7 +153,7 @@ export default function GettingStarted() {
     <div className="max-w-4xl mx-auto space-y-6">
       <PageHeader
         title="Getting Started Guide"
-        description="Everything you need to go from zero to productive in Expressive Voice App"
+        description="Everything you need to go from zero to productive in AI Talker App"
         icon={BookOpen}
         gradient="from-blue-500 to-violet-500"
       />

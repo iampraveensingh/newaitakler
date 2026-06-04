@@ -1,109 +1,126 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Play, BookOpen, Mic, Music2, PenTool, Video, Users, ArrowLeft, Clock, ChevronRight } from 'lucide-react';
+import {
+  Play, ArrowLeft, LayoutDashboard, Mic, Sparkles,
+  PenTool, BookOpen, Briefcase, Layers, Clock,
+} from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
-import GlassCard from '@/components/ui/GlassCard';
 
-const categories = [
+const SECTIONS = [
   {
-    id: 'getting-started',
-    label: 'Getting Started',
-    icon: BookOpen,
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
     color: 'from-violet-500 to-purple-600',
-    glow: 'violet',
-    tutorials: [
-      { title: 'Welcome to Expressive Voice App', duration: '3:12', description: 'A quick overview of everything the app can do and how to navigate the interface.' },
-      { title: 'Setting Up Your Account', duration: '2:45', description: 'How to log in, understand your plan, and configure your workspace for the first time.' },
-      { title: 'Understanding Your Dashboard', duration: '4:01', description: 'Reading your monthly usage stats, credits balance, and navigating to each feature.' },
-    ],
+    accent: 'text-violet-400',
+    border: 'border-violet-500/40',
+    glow: 'shadow-violet-500/20',
+    timestamp: '0:00',
+    description: 'Get familiar with the dashboard, your central hub for tracking monthly usage, credits balance, and navigating every feature.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=GRRmr84bEda1BxSi',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
   {
     id: 'voice-studio',
     label: 'Voice Studio',
     icon: Mic,
     color: 'from-pink-500 to-rose-600',
-    glow: 'pink',
-    tutorials: [
-      { title: 'Creating Your First Voiceover', duration: '5:20', description: 'Step-by-step walkthrough — write a script, pick a voice style, generate, and download.' },
-      { title: 'Voice Library & Editing', duration: '3:55', description: 'How to manage, re-edit, and regenerate saved voiceovers from your library.' },
-      { title: 'Clone Voice — Upload & Train', duration: '6:14', description: 'Upload an audio sample, train your clone, and use it across voiceover projects.' },
-      { title: 'Create a Custom AI Voice', duration: '4:38', description: 'Design a brand-new voice using text descriptions — no audio sample needed.' },
-    ],
+    accent: 'text-pink-400',
+    border: 'border-pink-500/40',
+    glow: 'shadow-pink-500/20',
+    timestamp: '0:23',
+    description: 'Learn how to create studio-quality voiceovers, clone voices, build custom AI voices, and manage your full voice library.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=TfZ0NhSt4Wba7TLC&start=23',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
   {
-    id: 'audio-tools',
-    label: 'Audio Tools',
-    icon: Music2,
-    color: 'from-blue-500 to-cyan-600',
-    glow: 'blue',
-    tutorials: [
-      { title: 'Using the Audio Mixer', duration: '5:47', description: 'Combine voiceovers with background music, adjust volumes, and export polished audio.' },
-      { title: 'Managing Mixer Projects', duration: '2:30', description: 'How to save, revisit, and download your completed mixer projects.' },
-    ],
+    id: 'brand-studio',
+    label: 'Brand Studio',
+    icon: Sparkles,
+    color: 'from-fuchsia-500 to-purple-600',
+    accent: 'text-fuchsia-400',
+    border: 'border-fuchsia-500/40',
+    glow: 'shadow-fuchsia-500/20',
+    timestamp: '15:05',
+    description: 'Discover how to build branded projects, design visual assets, and maintain a consistent identity across all your content.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=S3PJ6HhAJXc1QHKW&start=905',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
   {
     id: 'copy-creator',
     label: 'Copy Creator',
     icon: PenTool,
     color: 'from-amber-500 to-orange-600',
-    glow: 'amber',
-    tutorials: [
-      { title: 'Generating VSL Copy', duration: '4:22', description: 'Create compelling video sales letter scripts tailored to your product or offer.' },
-      { title: 'Creating Ad Copy', duration: '3:40', description: 'Produce short-form ads for social media, email campaigns, and landing pages.' },
-      { title: 'Managing Your Copy Libraries', duration: '2:15', description: 'Organise, search, and reuse saved VSL and Ad Copy from your libraries.' },
-    ],
+    accent: 'text-amber-400',
+    border: 'border-amber-500/40',
+    glow: 'shadow-amber-500/20',
+    timestamp: '17:45',
+    description: 'Generate high-converting VSL scripts and ad copy for any platform including social media, email campaigns, and landing pages.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=X4_m0RfysUC04Z47&start=1065',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
   {
-    id: 'transcription',
-    label: 'Transcription',
-    icon: Video,
+    id: 'audiobook',
+    label: 'AudioBook',
+    icon: BookOpen,
     color: 'from-emerald-500 to-teal-600',
-    glow: 'emerald',
-    tutorials: [
-      { title: 'Transcribing Audio & Video Files', duration: '3:58', description: 'Upload MP3, MP4, WAV, or M4A files and get an accurate AI-generated transcript.' },
-      { title: 'Downloading & Using Transcripts', duration: '2:10', description: 'Copy or export transcripts and use them in your voiceover scripts or marketing copy.' },
-    ],
+    accent: 'text-emerald-400',
+    border: 'border-emerald-500/40',
+    glow: 'shadow-emerald-500/20',
+    timestamp: '20:28',
+    description: 'Turn any text into a full audiobook with chapter navigation, multiple voices, and professional audio output.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=305wGXxCBhPWHGiq&start=1228',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
   {
-    id: 'agency',
-    label: 'Agency & Teams',
-    icon: Users,
-    color: 'from-indigo-500 to-violet-600',
-    glow: 'indigo',
-    tutorials: [
-      { title: 'Setting Up Your Agency', duration: '5:05', description: 'Enable the Agency add-on, create sub-users, and assign credit allocations.' },
-      { title: 'Managing Sub-Users & Credits', duration: '3:30', description: 'Monitor sub-user activity, adjust balances, and remove users when needed.' },
-    ],
+    id: 'freelancer-hub',
+    label: 'Freelancer Hub',
+    icon: Briefcase,
+    color: 'from-blue-500 to-indigo-600',
+    accent: 'text-blue-400',
+    border: 'border-blue-500/40',
+    glow: 'shadow-blue-500/20',
+    timestamp: '21:48',
+    description: 'Find freelance jobs, create winning gig listings for Fiverr and Upwork, and start landing clients with AI-powered proposals.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=wqqWUKmmxo_uG1S3&start=1308',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
+  },
+  {
+    id: 'other-features',
+    label: 'Other Features',
+    icon: Layers,
+    color: 'from-cyan-500 to-blue-600',
+    accent: 'text-cyan-400',
+    border: 'border-cyan-500/40',
+    glow: 'shadow-cyan-500/20',
+    timestamp: '24:13',
+    description: 'Explore the Audio Mixer, Transcription tool, Agency management, and all the additional power features packed into the platform.',
+    embedUrl: 'https://www.youtube.com/embed/AH9CGyzi5KI?si=TqFfDed3B7udfJQO&start=1453',
+    poster: 'https://app.aitalker.io/uploads/Dashboard.png',
   },
 ];
 
-const glowMap = {
-  violet: 'shadow-violet-500/20',
-  pink: 'shadow-pink-500/20',
-  blue: 'shadow-blue-500/20',
-  amber: 'shadow-amber-500/20',
-  emerald: 'shadow-emerald-500/20',
-  indigo: 'shadow-indigo-500/20',
-};
-
 export default function VideoTutorials() {
-  const [activeCategory, setActiveCategory] = useState('getting-started');
+  const [activeId, setActiveId] = useState('dashboard');
+  const [playing, setPlaying] = useState(false);
   const navigate = useNavigate();
 
-  const current = categories.find((c) => c.id === activeCategory);
+  const active = SECTIONS.find((s) => s.id === activeId);
+
+  // Reset poster when switching sections
+  useEffect(() => { setPlaying(false); }, [activeId]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader
         title="Video Tutorials"
-        description="Learn everything about Expressive Voice App with step-by-step guides"
+        description="Learn everything about AI Talker App with step-by-step guides"
         icon={Play}
         gradient="from-violet-500 to-blue-500"
       />
 
-      {/* Back to Support */}
       <button
         onClick={() => navigate(createPageUrl('Support'))}
         className="flex items-center gap-2 text-sm text-slate-400 hover:text-violet-300 transition-colors duration-150 group"
@@ -112,91 +129,127 @@ export default function VideoTutorials() {
         Back to Support
       </button>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-        {/* Category Sidebar */}
-        <div className="lg:w-64 flex-shrink-0">
-          <GlassCard className="p-3" hover={false}>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">Categories</p>
-            <nav className="space-y-1">
-              {categories.map((cat) => {
-                const isActive = cat.id === activeCategory;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                      ${isActive
-                        ? `bg-gradient-to-r ${cat.color} text-white shadow-lg ${glowMap[cat.glow]}`
-                        : 'text-slate-300 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    <cat.icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">{cat.label}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-500'}`}>
-                      {cat.tutorials.length}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          </GlassCard>
+        {/* ── Sidebar ── */}
+        <div className="w-full lg:w-60 flex-shrink-0">
+          <div className="rounded-2xl bg-slate-900/60 border border-slate-800/60 p-2 space-y-1">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">Sections</p>
+            {SECTIONS.map((s) => {
+              const isActive = s.id === activeId;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveId(s.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+                    ${isActive
+                      ? `bg-gradient-to-r ${s.color} text-white shadow-lg ${s.glow}`
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  <s.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">{s.label}</span>
+                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded-md flex items-center gap-1
+                    ${isActive ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-600'}`}>
+                    <Clock className="w-2.5 h-2.5" />
+                    {s.timestamp}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Tutorial Cards */}
+        {/* ── Video Panel ── */}
         <div className="flex-1 min-w-0">
-          <motion.div
-            key={activeCategory}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-4"
-          >
-            {/* Category heading */}
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${current.color} flex items-center justify-center shadow-lg`}>
-                <current.icon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">{current.label}</h2>
-                <p className="text-xs text-slate-500">{current.tutorials.length} tutorials</p>
-              </div>
-            </div>
-
-            {current.tutorials.map((tutorial, i) => (
-              <motion.div
-                key={tutorial.title}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-              >
-                <GlassCard className="p-4 group cursor-pointer" hover>
-                  <div className="flex items-start gap-4">
-                    {/* Play button */}
-                    <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${current.color} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200`}>
-                      <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-semibold text-white group-hover:text-violet-300 transition-colors duration-150 leading-snug">
-                          {tutorial.title}
-                        </h3>
-                        <span className="flex-shrink-0 flex items-center gap-1 text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
-                          <Clock className="w-3 h-3" />
-                          {tutorial.duration}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{tutorial.description}</p>
-                    </div>
-
-                    <ChevronRight className="flex-shrink-0 w-4 h-4 text-slate-600 group-hover:text-violet-400 group-hover:translate-x-1 transition-all duration-150 mt-1" />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeId}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="space-y-4"
+            >
+              {/* Section header */}
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${active.color} flex items-center justify-center shadow-lg ${active.glow}`}>
+                  <active.icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white leading-tight">{active.label}</h2>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Clock className={`w-3 h-3 ${active.accent}`} />
+                    <span className={`text-xs font-mono font-medium ${active.accent}`}>Starts at {active.timestamp}</span>
                   </div>
-                </GlassCard>
-              </motion.div>
-            ))}
-          </motion.div>
+                </div>
+              </div>
+
+              {/* Video embed */}
+              <div className={`relative rounded-2xl overflow-hidden border ${active.border} shadow-2xl ${active.glow}`}>
+                {/* Gradient top bar */}
+                <div className={`h-1 w-full bg-gradient-to-r ${active.color}`} />
+                {/* 16:9 responsive wrapper */}
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  {active.poster && !playing ? (
+                    /* Poster with play button overlay */
+                    <div
+                      className="absolute inset-0 cursor-pointer group"
+                      onClick={() => setPlaying(true)}
+                    >
+                      <img
+                        src={active.poster}
+                        alt={`${active.label} preview`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      {/* Dark overlay on hover */}
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors duration-200" />
+                      {/* Play button */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`w-16 h-16 rounded-full bg-gradient-to-br ${active.color} flex items-center justify-center shadow-2xl ${active.glow}`}
+                        >
+                          <Play className="w-7 h-7 text-white fill-white ml-1" />
+                        </motion.div>
+                      </div>
+                    </div>
+                  ) : (
+                    <iframe
+                      key={activeId}
+                      src={active.poster && playing ? `${active.embedUrl}&autoplay=1` : active.embedUrl}
+                      title={`${active.label} Tutorial`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-full bg-black"
+                      style={{ border: 0 }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="px-4 py-3 rounded-xl bg-slate-900/50 border border-slate-800/50">
+                <p className="text-sm text-slate-300 leading-relaxed">{active.description}</p>
+              </div>
+
+              {/* Section pills */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {SECTIONS.filter((s) => s.id !== activeId).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveId(s.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 hover:border-slate-600 text-slate-400 hover:text-white text-xs font-medium transition-all duration-150"
+                  >
+                    <s.icon className="w-3 h-3" />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

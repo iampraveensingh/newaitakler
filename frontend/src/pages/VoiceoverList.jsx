@@ -6,7 +6,7 @@ import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AudioLines, Plus, Search, Filter, Download,
-  Trash2, Star, MoreVertical, Tag, Clock, Copy
+  Trash2, Star, MoreVertical, Tag, Clock, Copy, Pencil
 } from 'lucide-react';
 import AudioWaveformPlayer from '@/components/audio/AudioWaveformPlayer';
 import DisabledWaveform from '@/components/audio/DisabledWaveform';
@@ -200,7 +200,7 @@ export default function VoiceoverList() {
                         <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
                           <Link to={createPageUrl(`CreateVoiceover?id=${vo.id}`)}>
                             <DropdownMenuItem className="text-slate-200 focus:text-white focus:bg-slate-700">
-                              Edit
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
                             </DropdownMenuItem>
                           </Link>
                           <DropdownMenuItem

@@ -43,7 +43,7 @@ const faqs = [
   },
   {
     question: 'I use the Support portal and the Members Dashboard — do I need two logins?',
-    answer: 'No. Expressive Voice uses a centralized login system. Your Support portal credentials and Members Dashboard credentials are the same username and password. Sign in once at the login page to access everything.'
+    answer: 'No. AI Talker uses a centralized login system. Your Support portal credentials and Members Dashboard credentials are the same username and password. Sign in once at the login page to access everything.'
   },
   {
     question: 'How do I reset my password?',

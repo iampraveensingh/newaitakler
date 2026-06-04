@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
-  Star, MoreVertical, AudioLines, ScrollText,
+  Star, MoreVertical, AudioLines,
   Save, X, Download, ExternalLink, CheckCircle2,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 export default function ScriptCard({
-  title, script, audioUrl, srtUrl, status,
+  title, script, audioUrl, status,
   isMain, onUpdate, onRender, onDelete, isSaving, isRendering,
 }) {
   const [menuOpen,  setMenuOpen]  = useState(false);
@@ -146,7 +146,7 @@ export default function ScriptCard({
 
       {/* ── Footer actions ── */}
       {!editing && (
-        <div className="grid grid-cols-3 border-t border-slate-700/40 mt-auto">
+        <div className="grid grid-cols-2 border-t border-slate-700/40 mt-auto">
 
           {/* Preview — opens audio in new tab */}
           <button
@@ -158,26 +158,15 @@ export default function ScriptCard({
             <ExternalLink className="w-3 h-3" /> Preview
           </button>
 
-          {/* Download audio — next to Preview */}
+          {/* Download audio */}
           <button
             type="button"
             disabled={!isRendered || !audioUrl}
             onClick={handleDownload}
             title="Download audio"
-            className="py-2.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 border-r border-slate-700/40"
-          >
-            <Download className="w-3 h-3" /> Download
-          </button>
-
-          {/* SRT — enabled only when srtUrl is set */}
-          <button
-            type="button"
-            disabled={!srtUrl}
-            onClick={() => srtUrl && window.open(srtUrl, '_blank', 'noopener')}
-            title={srtUrl ? 'Download SRT' : 'SRT not yet available'}
             className="py-2.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
           >
-            <ScrollText className="w-3 h-3" /> SRT
+            <Download className="w-3 h-3" /> Download
           </button>
         </div>
       )}

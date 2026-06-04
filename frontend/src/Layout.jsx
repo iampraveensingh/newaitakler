@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Mic, Music2, Video, Users,
   Sparkles, HelpCircle, LogOut, Menu, X, ChevronDown,
-  PenTool, Loader2, BookOpen, Briefcase,
+  PenTool, Loader2, BookOpen, Briefcase, TrendingUp, Gift, Package, ArrowRight, Code2,
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -24,14 +24,14 @@ const navItems = [
     icon: Mic,
     emoji: '🎙️',
     children: [
+      { name: 'Create Custom Voice', page: 'CreateCustomVoice',  emoji: '✨' },
+      { name: 'My Custom Voices',    page: 'CustomVoiceList',    emoji: '🎧' },
       { name: 'Create Voiceover',    page: 'CreateVoiceover',    emoji: '🎤' },
       { name: 'Voice Library',       page: 'VoiceoverList',      emoji: '📚' },
       { name: 'Conversational Voice',page: 'CreateConversational',emoji: '👥' },
       { name: 'My Conversations',    page: 'ConversationalList', emoji: '💬' },
       { name: 'Clone Voice',         page: 'CloneVoice',         emoji: '🐑' },
       { name: 'My Clones',           page: 'CloneList',          emoji: '👯' },
-      { name: 'Create Custom Voice', page: 'CreateCustomVoice',  emoji: '✨' },
-      { name: 'My Custom Voices',    page: 'CustomVoiceList',    emoji: '🎧' },
     ],
   },
   {
@@ -41,15 +41,6 @@ const navItems = [
     children: [
       { name: 'New Brand Project', page: 'BrandStudio',     emoji: '✨' },
       { name: 'Brand Projects',    page: 'BrandStudioList', emoji: '🗂️' },
-    ],
-  },
-  {
-    name: 'Audio Tools',
-    icon: Music2,
-    emoji: '🎵',
-    children: [
-      { name: 'Audio Mixer',    page: 'AudioMixer', emoji: '🎛️' },
-      { name: 'Mixer Projects', page: 'MixerList',  emoji: '🎧' },
     ],
   },
   {
@@ -83,7 +74,20 @@ const navItems = [
   },
   { name: 'Transcribe', icon: Video,          page: 'Transcribe', emoji: '🎥' },
   { name: 'Agency',     icon: Users,          page: 'Agency',     emoji: '🏢' },
+  { name: 'API',        icon: Code2,          page: 'ApiPage',    emoji: '🔑' },
+  {
+    name: 'Audio Tools',
+    icon: Music2,
+    emoji: '🎵',
+    children: [
+      { name: 'Audio Mixer',    page: 'AudioMixer', emoji: '🎛️' },
+      { name: 'Mixer Projects', page: 'MixerList',  emoji: '🎧' },
+    ],
+  },
   { name: 'Billing',    icon: LayoutDashboard, page: 'Billing',   emoji: '💳' },
+  { name: 'Revenue Calculator', icon: TrendingUp, page: 'RevenueCalculator', emoji: '💰' },
+  { name: 'All Bonuses', icon: Gift,    page: 'Bonuses',    emoji: '🎁' },
+  { name: 'Access Mega Bundle Here', icon: Package, page: 'MegaBundle', emoji: '📦' },
   {
     name: 'Support',
     icon: HelpCircle,
@@ -107,9 +111,9 @@ const NavCtx = createContext(null);
 // Defined OUTSIDE Layout so React never remounts it on state changes.
 
 const EXTERNAL_ADDONS = [
-  { key: 'ailogosuit',      name: 'AI Logo Suite',       emoji: '🎨', url: 'https://ailogosuite.app/' },
-  { key: 'viralinfluencer', name: 'Viral Influencer AI', emoji: '📱', url: 'https://app.viralinfluencerai.com/' },
-  { key: 'cleveraistudio',  name: 'Clever AI Studio',    emoji: '🎬', url: 'https://app.cleveraistudio.com/login' },
+  { key: 'ailogosuit',      name: 'AI Logo Suite',       emoji: '🎨', url: 'https://ailogosuite.app/',              salesUrl: 'https://aitalker.io/ailogosuite'    },
+  { key: 'viralinfluencer', name: 'Viral Influencer AI', emoji: '📱', url: 'https://app.viralinfluencerai.com/',    salesUrl: 'https://aitalker.io/viralinfluencer' },
+  { key: 'cleveraistudio',  name: 'Clever AI Studio',    emoji: '🎬', url: 'https://app.cleveraistudio.com/login', salesUrl: 'https://aitalker.io/cleverstudioai' },
 ];
 
 function ExternalAddonItem({ addon, enabled }) {
@@ -119,7 +123,13 @@ function ExternalAddonItem({ addon, enabled }) {
     if (enabled) {
       window.open(addon.url, '_blank', 'noopener,noreferrer');
     } else {
-      toast.error(`Subscribe to ${addon.name} to access this feature.`);
+      toast(`${addon.emoji} ${addon.name}`, {
+        description: 'Please subscribe to access this feature.',
+        action: {
+          label: 'Subscribe Now',
+          onClick: () => window.open(addon.salesUrl, '_blank', 'noopener,noreferrer'),
+        },
+      });
     }
   };
 
@@ -190,6 +200,9 @@ function NavItem({ item }) {
       </div>
     );
   }
+
+  // Agency sub-users: hide Agency menu entirely
+  if (item.page === 'Agency' && hasAgency) return null;
 
   // Agency users: Billing blocked
   if (item.page === 'Billing' && hasAgency) {
@@ -269,9 +282,6 @@ function Sidebar({ mobile = false }) {
         {/* External addon links — always visible */}
         <div className="pt-2 pb-1 px-3">
           <div className="h-px bg-slate-700/50" />
-          {sidebarOpen && (
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-2 mb-1">Your Add-ons</p>
-          )}
         </div>
         {EXTERNAL_ADDONS.map(addon => (
           <ExternalAddonItem key={addon.key} addon={addon} enabled={isAddonEnabled(addon.key)} />
@@ -411,6 +421,16 @@ export default function Layout({ children, currentPageName }) {
               />
             </div>
             <div className="flex items-center gap-1">
+              <Link to={createPageUrl('BonusesNew')}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:border-amber-400/40 transition-all duration-200"
+                >
+                  <Gift className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-semibold text-amber-300">Bonuses</span>
+                </motion.div>
+              </Link>
               <NotificationCenter />
               <Button variant="ghost" size="icon" onClick={() => setMobileOpen(o => !o)}>
                 {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -459,7 +479,38 @@ export default function Layout({ children, currentPageName }) {
           {/* Main Content */}
           <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'ml-72' : 'ml-20'}`}>
             {/* Desktop top bar */}
-            <div className="sticky top-0 z-30 flex justify-end items-center px-8 py-3 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/40">
+            <div className="sticky top-0 z-30 flex justify-end items-center gap-2 px-8 py-3 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/40">
+              {/* Training CTA */}
+              <motion.a
+                href="https://lnks.prowebventures.com/aitalkertraining"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative flex items-center gap-2 px-4 py-1.5 rounded-xl overflow-hidden border border-violet-500/40 hover:border-violet-400/70 transition-all duration-200 cursor-pointer group"
+              >
+                {/* Animated shimmer background */}
+                <span className="absolute inset-0 bg-gradient-to-r from-violet-600/20 via-fuchsia-500/20 to-pink-500/20 group-hover:from-violet-600/35 group-hover:via-fuchsia-500/30 group-hover:to-pink-500/25 transition-all duration-300" />
+                <motion.span
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative w-2 h-2 rounded-full bg-fuchsia-400 shadow-[0_0_6px_2px_rgba(217,70,239,0.6)]"
+                />
+                <span className="relative text-sm font-semibold bg-gradient-to-r from-violet-300 via-fuchsia-300 to-pink-300 bg-clip-text text-transparent whitespace-nowrap">
+                  17 Ways to Make Money with AI Talker! (Register Now)
+                </span>
+                <ArrowRight className="relative w-3.5 h-3.5 text-fuchsia-400 group-hover:translate-x-0.5 transition-transform duration-150" />
+              </motion.a>
+              <Link to={createPageUrl('BonusesNew')}>
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/25 hover:border-amber-400/50 hover:from-amber-500/25 hover:to-orange-500/20 transition-all duration-200 cursor-pointer"
+                >
+                  <Gift className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-semibold text-amber-300">Bonuses</span>
+                </motion.div>
+              </Link>
               <NotificationCenter />
             </div>
             <div className="p-6 lg:p-8">{children}</div>

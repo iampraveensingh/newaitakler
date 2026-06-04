@@ -96,7 +96,9 @@ export default function CreditsCard({ creditsUsed = 0, creditsLimit = 1000, plan
             <p className="text-xs text-slate-400">
               {planName === 'UNLIMITED' || planName === 'BUNDLE' || planName === 'ALLACCESS'
                 ? planName
-                : planName ? `${planName} Plan` : 'Monthly allocation'}
+                : planName === 'AGENCY'
+                  ? 'Agency Account'
+                  : planName ? `${planName} Plan` : 'Monthly allocation'}
             </p>
           </div>
           <div className="ml-auto text-right">

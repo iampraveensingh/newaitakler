@@ -5,6 +5,14 @@ import { successResponse, errorResponse } from '../utils/response.js';
 // ─── Helper ───────────────────────────────────────────────────────────────────
 const SAFE_USER_FIELDS = 'id, username, email, full_name, role, base_plan, addons, credits_balance, is_active, created_at, last_login_at';
 
+// Returns true if the admin has an unlimited-credit plan — skip balance checks for these users
+function isUnlimitedAdmin(user) {
+  const plan = (user.base_plan || '').toUpperCase();
+  if (plan === 'BUNDLE' || plan === 'ALLACCESS') return true;
+  const addons = user.addons || {};
+  return addons.ALLACCESS === true || addons.allaccess === true;
+}
+
 function parseAddons(row) {
   if (!row) return row;
   const clone = { ...row };
@@ -19,6 +27,11 @@ export const requireAgencyAddon = (req, res, next) => {
   const user = req.user;
   let addons = user.addons;
   if (typeof addons === 'string') { try { addons = JSON.parse(addons); } catch { addons = {}; } }
+
+  // BUNDLE / ALLACCESS plans include Agency — no addon key needed
+  // UNLIMITED plan does NOT include Agency unless the AGENCY addon is purchased separately
+  const plan = (user.base_plan || '').toUpperCase();
+  if (plan === 'BUNDLE' || plan === 'ALLACCESS') return next();
 
   const hasAgency = addons?.AGENCY === true || addons?.agency === true;
   if (!hasAgency) {
@@ -64,7 +77,8 @@ export const createAgencyUser = async (req, res) => {
     const initialCredits = Math.max(0, parseInt(credits_balance) || 0);
 
     // Check admin has enough credits to cover the initial allocation
-    if (initialCredits > 0) {
+    // (skipped for unlimited-plan admins — they have no numeric balance cap)
+    if (initialCredits > 0 && !isUnlimitedAdmin(adminUser)) {
       const adminBalance = parseInt(adminUser.credits_balance) || 0;
       if (adminBalance < initialCredits) {
         return errorResponse(res, `Insufficient credits. You have ${adminBalance} credits available but need ${initialCredits}.`, 400);
@@ -92,8 +106,8 @@ export const createAgencyUser = async (req, res) => {
       ]
     );
 
-    // Deduct initial credits from admin's balance
-    if (initialCredits > 0) {
+    // Deduct initial credits from admin's balance (not for unlimited-plan admins)
+    if (initialCredits > 0 && !isUnlimitedAdmin(adminUser)) {
       await db.query(
         'UPDATE users SET credits_balance = credits_balance - ?, updated_at = NOW() WHERE id = ?',
         [initialCredits, req.user.id]
@@ -163,9 +177,9 @@ export const removeAgencyUser = async (req, res) => {
       return errorResponse(res, 'Agency user not found', 404);
     }
 
-    // Refund remaining credits back to admin before deactivating
+    // Refund remaining credits back to admin before deactivating (skip for unlimited admins)
     const remainingCredits = parseInt(rows[0].credits_balance) || 0;
-    if (remainingCredits > 0) {
+    if (remainingCredits > 0 && !isUnlimitedAdmin(req.user)) {
       await db.query(
         'UPDATE users SET credits_balance = credits_balance + ?, updated_at = NOW() WHERE id = ?',
         [remainingCredits, req.user.id]
@@ -202,19 +216,23 @@ export const allocateCredits = async (req, res) => {
     const existingBalance = parseInt(rows[0].credits_balance) || 0;
     const delta = newBalance - existingBalance;
 
+    const unlimited = isUnlimitedAdmin(req.user);
+
     if (delta > 0) {
-      // Allocating more credits — check admin has enough
-      const [[adminRow]] = await db.query('SELECT credits_balance FROM users WHERE id = ?', [req.user.id]);
-      const adminBalance = parseInt(adminRow.credits_balance) || 0;
-      if (adminBalance < delta) {
-        return errorResponse(res, `Insufficient credits. You have ${adminBalance} credits available but need ${delta} more.`, 400);
+      // Allocating more credits — check admin has enough (skip for unlimited admins)
+      if (!unlimited) {
+        const [[adminRow]] = await db.query('SELECT credits_balance FROM users WHERE id = ?', [req.user.id]);
+        const adminBalance = parseInt(adminRow.credits_balance) || 0;
+        if (adminBalance < delta) {
+          return errorResponse(res, `Insufficient credits. You have ${adminBalance} credits available but need ${delta} more.`, 400);
+        }
+        await db.query(
+          'UPDATE users SET credits_balance = credits_balance - ?, updated_at = NOW() WHERE id = ?',
+          [delta, req.user.id]
+        );
       }
-      await db.query(
-        'UPDATE users SET credits_balance = credits_balance - ?, updated_at = NOW() WHERE id = ?',
-        [delta, req.user.id]
-      );
-    } else if (delta < 0) {
-      // Reducing allocation — return freed credits to admin
+    } else if (delta < 0 && !unlimited) {
+      // Reducing allocation — return freed credits to admin (not needed for unlimited admins)
       await db.query(
         'UPDATE users SET credits_balance = credits_balance + ?, updated_at = NOW() WHERE id = ?',
         [Math.abs(delta), req.user.id]

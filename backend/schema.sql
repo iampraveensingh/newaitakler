@@ -1,5 +1,5 @@
 -- ============================================================
--- Expressive Voice — MySQL Database Schema
+-- AI Talker — MySQL Database Schema
 -- Generated for Express + MySQL2 migration from Base44
 -- ============================================================
 
@@ -448,6 +448,40 @@ ALTER TABLE `brand_studio_projects`
   AFTER `vsl_script`;
 
 -- ─────────────────────────────────────────────────────────────
+-- USER_API_KEYS — one API key per user for public voice API
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `user_api_keys` (
+  `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`      INT UNSIGNED NOT NULL,
+  `api_key`      VARCHAR(64)  NOT NULL,
+  `is_active`    TINYINT(1)   NOT NULL DEFAULT 1,
+  `last_used_at` DATETIME     NULL,
+  `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_api_key`     (`api_key`),
+  UNIQUE KEY `uq_user_api_key`(`user_id`),
+  INDEX `idx_uak_user_id`     (`user_id`),
+  CONSTRAINT `fk_uak_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────
+-- API_LOGS — log every call made to the public /v1/voices API
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `api_logs` (
+  `id`               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`          INT UNSIGNED NULL     COMMENT 'NULL when API key is invalid',
+  `endpoint`         VARCHAR(255) NOT NULL,
+  `method`           VARCHAR(10)  NOT NULL DEFAULT 'POST',
+  `status_code`      SMALLINT     NOT NULL,
+  `status`           ENUM('success','failed') NOT NULL DEFAULT 'failed',
+  `ip_address`       VARCHAR(45)  NULL,
+  `response_summary` VARCHAR(255) NULL,
+  `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_al_user_id`   (`user_id`),
+  INDEX `idx_al_created_at`(`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────
 -- MIGRATION: Add new usage columns to existing tables
 -- Run these if the tables already exist
 -- ─────────────────────────────────────────────────────────────
@@ -553,6 +587,18 @@ ALTER TABLE `custom_voices`
   ADD COLUMN IF NOT EXISTS `job_id` VARCHAR(255) NULL
   COMMENT 'Job ID returned by TTS generation API'
   AFTER `audio_url`;
+
+-- MIGRATION: api_type column — 1 = standard TTS API, 2 = emotion voice API
+ALTER TABLE `voiceovers`
+  ADD COLUMN IF NOT EXISTS `api_type` TINYINT(1) NOT NULL DEFAULT 1
+  COMMENT '1 = standard TTS, 2 = emotion voice API'
+  AFTER `voice_consistency`;
+
+-- MIGRATION: voice_clones script column for cloning text
+ALTER TABLE `voice_clones`
+  ADD COLUMN IF NOT EXISTS `script` LONGTEXT NULL
+  COMMENT 'Text script used during the voice cloning process'
+  AFTER `description`;
 
 -- MIGRATION: for existing tables created before the simplified schema
 ALTER TABLE `audiobooks`

@@ -174,7 +174,7 @@ export default function CloneList() {
                           compact
                         />
                         <Link
-                          to={createPageUrl('CreateVoiceover') + `?voiceId=clone_${clone.id}&voiceName=${encodeURIComponent(clone.name)}&voiceType=cloned`}
+                          to={createPageUrl('CreateVoiceover') + `?voiceId=clone_${clone.id}&voiceName=${encodeURIComponent(clone.name)}&voiceType=cloned&voiceUrl=${encodeURIComponent(clone.audio_url || clone.sample_url || '')}`}
                           className="block mt-2"
                         >
                           <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500">

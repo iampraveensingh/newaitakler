@@ -182,7 +182,7 @@ export default function CustomVoiceList() {
                       <>
                         <AudioWaveformPlayer audioUrl={voice.audio_url} compact />
                         <Link
-                          to={createPageUrl('CreateVoiceover') + `?voiceId=custom_${voice.id}&voiceName=${encodeURIComponent(voice.name)}&voiceType=custom`}
+                          to={createPageUrl('CreateVoiceover') + `?voiceId=custom_${voice.id}&voiceName=${encodeURIComponent(voice.name)}&voiceType=custom&voiceUrl=${encodeURIComponent(voice.audio_url || '')}`}
                           className="block mt-2"
                         >
                           <Button size="sm" className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400">

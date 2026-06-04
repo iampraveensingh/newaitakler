@@ -76,18 +76,7 @@ export default function CreateConversational() {
     if (existingConv) {
       setTitle(existingConv.title || '');
       setScript(existingConv.full_script || '');
-      // speakers is stored as [{ name, voice_url }] — map back to UI shape
-      const savedSpeakers = existingConv.speakers || [];
-      if (savedSpeakers.length) {
-        setSpeakers(savedSpeakers.map(s => ({
-          label:      s.name       || '',
-          voice_id:   '',
-          voice_name: '',
-          voice_type: '',
-          voice_url:  s.voice_url  || '',
-        })));
-        setIsAnalyzed(true);
-      }
+      // Do NOT set isAnalyzed — user must click Analyze and re-select voices to proceed
     }
   }, [existingConv]);
 
@@ -135,11 +124,25 @@ export default function CreateConversational() {
     toast.success(`Detected ${result.speakers.length} speakers and ${result.segments.length} lines`);
   };
 
-  const allVoicesAssigned = speakers.length > 0 && speakers.every(s => s.voice_id);
+  // voice_id is set for freshly-selected voices; voice_url is set for restored/saved ones
+  const allVoicesAssigned = speakers.length > 0 && speakers.every(s => s.voice_id || s.voice_url);
+
+  const validateForm = () => {
+    if (!title.trim()) {
+      toast.error('Please enter a project title.');
+      return false;
+    }
+    if (!script.trim()) {
+      toast.error('Please enter a script.');
+      return false;
+    }
+    return true;
+  };
 
   const handleGenerate = async () => {
-    if (!script.trim()) {
-      toast.error('Script cannot be empty.');
+    if (!validateForm()) return;
+    if (!isAnalyzed || speakers.length === 0) {
+      toast.error('Please analyze your script first to detect speakers.');
       return;
     }
     if (!allVoicesAssigned) {
@@ -157,7 +160,7 @@ export default function CreateConversational() {
       .map(s => ({ name: s.label, voice_url: s.voice_url || '' }));
 
     await saveMutation.mutateAsync({
-      title: title || 'Untitled Conversation',
+      title: title.trim(),
       full_script: script,
       segments: segmentsPayload,
       speakers: speakersPayload,
@@ -288,14 +291,18 @@ export default function CreateConversational() {
 
               <Button
                 onClick={() => {
+                  if (!validateForm()) return;
+                  if (!allVoicesAssigned) {
+                    toast.error('Please assign a voice to every speaker before saving.');
+                    return;
+                  }
                   saveMutation.mutate({
-                    title: title || 'Untitled Conversation',
+                    title: title.trim(),
                     full_script: script,
                     segments,
                     speakers,
                     status: 'draft'
-                  });
-                  toast.success('Draft saved!');
+                  }, { onSuccess: () => toast.success('Draft saved!') });
                 }}
                 variant="outline"
                 className="w-full sm:w-auto border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 h-14 px-8"

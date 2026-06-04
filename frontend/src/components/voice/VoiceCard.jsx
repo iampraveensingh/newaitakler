@@ -14,6 +14,8 @@ const voiceCategories = {
   'entertainment':  { emoji: '⭐', label: 'Entertainment',  color: 'from-yellow-500 to-orange-500',  badge: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/25'},
   'cloned':         { emoji: '🐑', label: 'Cloned',         color: 'from-green-500 to-emerald-500',  badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'},
   'custom':         { emoji: '✨', label: 'Custom',         color: 'from-violet-500 to-purple-500',  badge: 'bg-violet-500/15 text-violet-300 border-violet-500/25'},
+  'emotion':        { emoji: '🎭', label: 'Emotion',        color: 'from-fuchsia-500 to-violet-600', badge: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/25'},
+  'lemonfox':       { emoji: '⚡', label: 'Premium',       color: 'from-yellow-400 to-orange-500',  badge: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/25'  },
 };
 
 const BAR_COUNT = 16;

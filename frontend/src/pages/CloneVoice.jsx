@@ -20,6 +20,7 @@ export default function CloneVoice() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    script: '',
     language: 'en',
     clone_mode: 'standard',
     is_public: false,
@@ -77,6 +78,11 @@ export default function CloneVoice() {
 
   const handleTrainingComplete = () => {
     setCurrentStep(4);
+  };
+
+  const handleCreateNew = () => {
+    setFormData({ name: '', description: '', script: '', language: 'en', clone_mode: 'standard', is_public: false, sample_url: '', source_type: '', status: 'pending' });
+    setCurrentStep(1);
   };
 
   const steps = [
@@ -194,7 +200,7 @@ export default function CloneVoice() {
               <TrainingStep onComplete={handleTrainingComplete} />
             )}
             {currentStep === 4 && (
-              <CompleteStep voiceName={formData.name} />
+              <CompleteStep voiceName={formData.name} onCreateNew={handleCreateNew} />
             )}
           </motion.div>
         </GlassCard>

@@ -85,7 +85,7 @@ export default function SpeakerAssignmentSection({ speakers, segments, onSpeaker
       <AnimatePresence mode="popLayout">
         {speakers.map((speaker, i) => (
           <SpeakerCard
-            key={speaker.label + i}
+            key={i}
             speaker={speaker}
             index={i}
             segments={segments}
