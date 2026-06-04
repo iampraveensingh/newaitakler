@@ -160,6 +160,7 @@ export const generateVoice = async (req, res) => {
     return res.status(400).json({ success: false, message: 'voice_url and tts_text are required.' });
   }
 
+  let userId = null;
   try {
     // 3. Validate API key
     const [keyRows] = await db.query(
@@ -171,7 +172,7 @@ export const generateVoice = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid or revoked API key.' });
     }
 
-    const userId = keyRows[0].user_id;
+    userId = keyRows[0].user_id;
 
     // 4. Stamp last_used_at
     await db.query('UPDATE user_api_keys SET last_used_at = NOW() WHERE api_key = ?', [apiKey]);
@@ -182,7 +183,8 @@ export const generateVoice = async (req, res) => {
       [userId]
     );
     const plan     = (user?.base_plan || 'FE').toUpperCase();
-    const addons   = user?.addons || {};
+    let   addons   = user?.addons || {};
+    if (typeof addons === 'string') { try { addons = JSON.parse(addons); } catch { addons = {}; } }
     const wordCount = tts_text.trim().split(/\s+/).filter(Boolean).length;
 
     // 6. Determine if user has unlimited credits
@@ -322,7 +324,7 @@ export const generateVoice = async (req, res) => {
   } catch (error) {
     console.error('generateVoice error:', error.message);
     const apiMsg = error.response?.data?.message || error.response?.data?.error;
-    await logCall({ userId: null, endpoint, method, statusCode: 500, status: 'failed', ip, summary: apiMsg || error.message });
+    await logCall({ userId, endpoint, method, statusCode: 500, status: 'failed', ip, summary: apiMsg || error.message });
     return res.status(500).json({ success: false, message: apiMsg || 'Voice generation failed. Please try again.' });
   }
 };

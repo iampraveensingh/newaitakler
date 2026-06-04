@@ -335,7 +335,7 @@ function ApiLogsTab() {
 
   const { data: logs = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['apiLogs'],
-    queryFn:  () => apiKeyApi.getLogs(500),
+    queryFn:  () => apiKeyApi.getLogs(200),
     refetchInterval: 30_000,
   });
 
@@ -345,9 +345,6 @@ function ApiLogsTab() {
   const totalPages  = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
   const safePage    = Math.min(page, totalPages);
   const paginated   = logs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // Reset to page 1 when new data arrives
-  const prevLen = logs.length;
 
   return (
     <div className="space-y-5">
