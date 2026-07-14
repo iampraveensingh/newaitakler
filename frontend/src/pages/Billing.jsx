@@ -62,7 +62,7 @@ const addonDefinitions = {
     icon: PenTool,
     color: 'from-amber-500 via-orange-500 to-red-500',
     shadow: 'shadow-amber-500/30',
-    salesUrl: 'https://aitalker.io/ai-ad-copy-creator',
+    salesUrl: 'https://aitalker.io/ai-ad-copy-creator-v3',
     features: [
       'Unlimited ad copies',
       'All platform templates',
@@ -78,7 +78,7 @@ const addonDefinitions = {
     icon: Video,
     color: 'from-emerald-500 via-teal-500 to-cyan-500',
     shadow: 'shadow-emerald-500/30',
-    salesUrl: 'https://aitalker.io/ai-transciber',
+    salesUrl: 'https://aitalker.io/transcriber-v3',
     features: [
       'Unlimited transcriptions',
       'All output formats',
@@ -94,7 +94,7 @@ const addonDefinitions = {
     icon: Users,
     color: 'from-blue-500 via-indigo-500 to-violet-500',
     shadow: 'shadow-blue-500/30',
-    salesUrl: 'https://aitalker.io/agency-kit',
+    salesUrl: 'https://aitalker.io/agencykit-v3',
     features: [
       'Unlimited team members',
       'Client workspaces',

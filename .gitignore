@@ -1,0 +1,15 @@
+# Large binary archives
+*.zip
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+
+# Build output
+graphify-out/
+
+# OS files
+Thumbs.db
+.DS_Store
