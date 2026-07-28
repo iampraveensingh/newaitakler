@@ -31,6 +31,7 @@ import systemVoicesRoutes from './routes/systemVoices.js';
 import jobsRoutes from './routes/jobs.js';
 import apiKeyRoutes from './routes/apiKeys.js';
 import { fetchVoices, generateVoice } from './controllers/publicApiController.js';
+import { mountMcpEndpoints } from './mcp/handler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -355,6 +356,9 @@ app.use('/api/system-voices',          verifyToken, systemVoicesRoutes);
 app.use('/api/audiobooks',             verifyToken, audiobookRoutes);
 
 // (Agency routes are now handled by /routes/agency.js)
+
+// ── MCP Server (Model Context Protocol) ──────────────────────────────────────
+mountMcpEndpoints(app);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
