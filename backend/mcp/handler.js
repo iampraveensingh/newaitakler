@@ -158,8 +158,8 @@ function createMcpServer(userId) {
   return server;
 }
 
-async function resolveApiKey(req) {
-  return req.headers['x-api-key'] ||
+function resolveApiKey(req) {
+  return req.headers['x-api-key'] || req.query?.apiKey ||
     (() => { try { return JSON.parse(req.headers['extra-headers'] || '{}')['X-Api-Key']; } catch { return null; } })();
 }
 
@@ -175,8 +175,11 @@ export function mountMcpEndpoints(app) {
   // ═══════════════════════════════════════════════════════════════════════════
 
   app.get('/sse', async (req, res) => {
-    const apiKey = await resolveApiKey(req);
+    const apiKey = resolveApiKey(req);
     if (!apiKey) return res.status(401).json({ error: 'Missing X-Api-Key' });
+
+    // Inject apiKey into headers so resolveUserId can find it
+    if (!req.headers['x-api-key'] && apiKey) req.headers['x-api-key'] = apiKey;
 
     const userId = await resolveUserId(req);
     if (!userId) return res.status(401).json({ error: 'Invalid API key' });
@@ -184,7 +187,7 @@ export function mountMcpEndpoints(app) {
     const server = createMcpServer(userId);
     const transport = new SSEServerTransport('/messages', res);
 
-    sseSessions.set(transport.sessionId, { server, transport });
+    sseSessions.set(transport.sessionId, { server, transport, apiKey });
 
     res.on('close', () => {
       sseSessions.delete(transport.sessionId);
@@ -200,6 +203,8 @@ export function mountMcpEndpoints(app) {
     if (!session) {
       return res.status(400).json({ error: 'Invalid or expired session. Connect to /sse first.' });
     }
+    // Inject stored apiKey so tools can authenticate
+    if (session.apiKey && !req.headers['x-api-key']) req.headers['x-api-key'] = session.apiKey;
     await session.transport.handlePostMessage(req, res);
   });
 
